@@ -54,7 +54,7 @@ function loadUrls(){
         urlsList.innerHTML = "";
         for (let url of items.urls){
             var urlRow = document.createElement("li")
-            urlRow.innerHTML = url
+            urlRow.textContent = url
             urlRow.addEventListener("click", deleteUrl)
             urlsList.appendChild(urlRow)
         }
