@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+
+
+            :root { box-sizing: border-box; }
+            *, *::before, *::after, *::marker { box-sizing: inherit; }
+
+            body {
+                width: 95%;
+                height: 95%;
+                margin: 0 auto;
+                display: flex;
+                flex-direction: column;
+            }
+
+            body > section {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                margin: 0.5em
+            }
+
+            table tr > *:nth-child(1) { 
+                width: 10em;
+                min-width: 10em;
+                padding: 0.5em;
+            }
+            table tr > *:nth-child(2) { 
+                width: 100%; 
+                display: flex;
+                flex-direction: row;
+                justify-content: start;
+                flex-wrap: nowrap;
+            }
+
+            h1 {
+                color: #0088FF;
+                text-align: center;
+                font-size: xx-large;
+            }
+
+            h2 {
+                color: #0088FF;
+                text-align: center;
+                font-size: larger;
+            }
+
+            label {
+                margin: 0.5em;
+            }
+
+            button  {
+                margin: 0.5em;
+                min-width:fit-content;
+                text-align: center;
+            }
+
+            input[type=text], input[type=file]{
+                margin: 0.5em;
+                width: 100%;
+            }
+
+            ul {
+                overflow: auto;
+                width: 100%;
+                max-height: 20em;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>BlockURL Settings</h1>
+        <section id="blocked-page-section">
+            <h2>Blocked Page Settings</h2>
+            <table>
+                <tr>
+                    <td><label>Heading Text</label></td>
+                    <td><input type="text" id="heading-text-entry"></td>
+                </tr>
+                <tr>
+                    <td><label>Body Text</label></td>
+                    <td><input type="text" id="body-text-entry"></td>
+                </tr>
+                <tr>
+                    <td><label>Button Text</label></td>
+                    <td><input type="text" id="button-text-entry"></td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td><button id="save-settings-button">Save Settings</button></td>
+                </tr>
+            </table>            
+        </section>
+        <section id="urls-section">
+            <h2>Import & Export</h2>
+            <table>
+                <tr>
+                    <td><label>Import URLs</label></td>
+                    <td>
+                        <input id="urls-file-button" type="file" name="urls-file" accept="text">
+                        <button id="replace-urls-button">Replace URLs</button>
+                        <button id="append-urls-button">Append URLs</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td><label>Export URLs</label></td>
+                    <td><button id="export-urls-button">Export URLs</button></td>
+                </tr>
+            </table>
+
+        </section>
+        <section>
+            <h2>URL List</h2>
+            <table>
+                <tr>
+                    <td><label>Add URL</label></td>
+                    <td>
+                        <input type="text" id="add-url-entry">
+                        <button id="add-url-button">Add Url</button>
+                    </td>
+                </tr>
+            </table>
+            <ul id="urls-list"></ul>
+        </section>
+        <script src="/options.js"></script>
+    </body>
+</html>
