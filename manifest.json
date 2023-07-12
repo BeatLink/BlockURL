@@ -10,7 +10,7 @@
         }
     },
     "icons": {
-      "48": "no.png"
+      "512": "no.png"
     },
     "permissions": [
       "webRequest",
