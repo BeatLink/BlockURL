@@ -1,5 +1,11 @@
 "use strict";
 
+var contextMenu = {
+  id: "block-selected-link",
+  title: "Block This Link",
+  contexts: ["link"],
+}
+
 // Initialize Plugin Storage ------------------------------------------------------------------------------------------
 function initialize() {
     var settings = {
@@ -22,7 +28,7 @@ function toggleBlockedState(page){
         var urls = items.urls
         if (urls.has(page.url)) {
             console.log("Removing from Blocklist: " + page.url)
-            urls.delete(page.url); 
+            urls.delete(page.url);
         } else {
             console.log("Adding to Blocklist: " + page.url)
             urls.add(page.url)
@@ -49,8 +55,16 @@ function onTabUpdated(tabID, changeInfo){
     })
 }
 
+
+function onContextMenuClicked(info, tab){
+    var page = {url: info.linkUrl}
+    toggleBlockedState(page)
+}
+
 browser.runtime.onInstalled.addListener(initialize)
 browser.pageAction.onClicked.addListener(toggleBlockedState);
 browser.runtime.onMessage.addListener(onMessage)
 browser.tabs.onUpdated.addListener(onTabUpdated, {properties: ["url"]})
 browser.browserAction.onClicked.addListener(openSettingsPage);
+browser.menus.create(contextMenu)
+browser.menus.onClicked.addListener(onContextMenuClicked)
