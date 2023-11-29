@@ -1,6 +1,6 @@
 from flask import Flask
-from blockurl.database import DatabaseManager
-from blockurl.views import IndexView, SettingsView, UrlsView
+from .database import DatabaseManager
+from .views import IndexView, SettingsView, UrlsView
 
 app = Flask(__name__)
 database = DatabaseManager(database_name="/app/blockurl.db", create_tables=True, initialize_settings=True)
