@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta charset="utf-8">
         <style>
 
@@ -72,6 +73,19 @@
     </head>
     <body>
         <h1>BlockURL Settings</h1>
+        <section id="sync-server-section">
+            <h2>Sync Server Settings</h2>
+            <table>
+                <tr>
+                    <td><label for="sync-server-url">Sync Server URL</label></td>
+                    <td><input type="text" id="sync-server-url" name="sync-server-url" /></td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td><button id="save-sync-button">Save</button></td>
+                </tr>
+            </table>
+        </section>
         <section id="blocked-page-section">
             <h2>Blocked Page Settings</h2>
             <table>
@@ -100,7 +114,6 @@
                     <td><label>Import URLs</label></td>
                     <td>
                         <input id="urls-file-button" type="file" name="urls-file" accept="text">
-                        <button id="replace-urls-button">Replace URLs</button>
                         <button id="append-urls-button">Append URLs</button>
                     </td>
                 </tr>
@@ -122,8 +135,9 @@
                     </td>
                 </tr>
             </table>
-            <ul id="urls-list"></ul>
+            <ul id="urls-list">
+            </ul>
         </section>
-        <script src="/options.js"></script>
+        <script src="options.js"></script>
     </body>
 </html>

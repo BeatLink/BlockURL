@@ -1,0 +1,2 @@
+flask>=3.0.0
+flask-classful>=0.16.0
