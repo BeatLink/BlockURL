@@ -3,7 +3,7 @@ from .database import DatabaseManager
 from .views import IndexView, SettingsView, UrlsView
 
 app = Flask(__name__)
-database = DatabaseManager(database_name="/app/blockurl.db", create_tables=True, initialize_settings=True)
+database = DatabaseManager(database_name="/app/database/blockurl.db", create_tables=True, initialize_settings=True)
 IndexView.register(app)
 SettingsView.register(app, init_argument=database)
 UrlsView.register(app, init_argument=database)
