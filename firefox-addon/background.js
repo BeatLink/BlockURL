@@ -1,44 +1,11 @@
 "use strict";
 
+import { queryURLs, blockURLs, unblockURLs } from "/api.js"
+
 var contextMenu = {
   id: "block-selected-link",
   title: "Block This Link",
   contexts: ["link"],
-}
-
-
-// API Functions ======================================================================================================
-function queryURL(url, onDone){
-    browser.storage.sync.get("syncServerURL").then((settings) => {
-        url = url.endsWith('/') ? url.slice(0, -1) : url;
-        const xhttp = new XMLHttpRequest();
-        xhttp.onload = () => { onDone(xhttp) }
-        xhttp.open("POST", `${settings["syncServerURL"]}/urls/check`, true);
-        xhttp.setRequestHeader("Content-type", "application/json;charset=UTF-8");
-        xhttp.send(JSON.stringify({"url": url}));
-    })
-}
-
-function blockURL(url, onDone) {
-    browser.storage.sync.get("syncServerURL").then((settings) => {
-        url = url.endsWith('/') ? url.slice(0, -1) : url;
-        const xhttp = new XMLHttpRequest();
-        xhttp.onload = () => { onDone(xhttp) }
-        xhttp.open("POST", `${settings["syncServerURL"]}/urls/block`, true);
-        xhttp.setRequestHeader("Content-type", "application/json;charset=UTF-8");
-        xhttp.send(JSON.stringify({"url": url}));
-    })
-}
-
-function unblockURL(url, onDone){
-    browser.storage.sync.get("syncServerURL").then((settings) => {
-        url = url.endsWith('/') ? url.slice(0, -1) : url;
-        const xhttp = new XMLHttpRequest();
-        xhttp.onload = () => { onDone(xhttp) }
-        xhttp.open("POST", `${settings["syncServerURL"]}/urls/unblock`, true);
-        xhttp.setRequestHeader("Content-type", "application/json;charset=UTF-8");
-        xhttp.send(JSON.stringify({"url": url}));
-    })
 }
 
 // Initialize Plugin Storage ------------------------------------------------------------------------------------------
@@ -58,13 +25,16 @@ function openSettingsPage() {
 
 // Toggle Blocking For Page -------------------------------------------------------------------------------------------
 function toggleBlockedState(page){
-    queryURL(page.url, (xhttp) => {
-        if (JSON.parse(xhttp.responseText)) {
-            console.log("Removing from Blocklist: " + page.url)
-            unblockURL(page.url, (xhttp) => {browser.tabs.reload()})
+    var url = page.url
+    url = url.endsWith('/') ? url.slice(0, -1) : url;
+    queryURLs([url], (xhttp) => {
+        var response = JSON.parse(xhttp.responseText)
+        if (response[url]) {
+            console.log("Removing from Blocklist: " + url)
+            unblockURLs([url], (xhttp) => {browser.tabs.reload()})
         } else {
-            console.log("Adding to Blocklist: " + page.url)
-            blockURL(page.url, (xhttp) => {browser.tabs.reload()})
+            console.log("Adding to Blocklist: " + url)
+            blockURLs([url], (xhttp) => {browser.tabs.reload()})
         }
     })    
 }
@@ -72,15 +42,18 @@ function toggleBlockedState(page){
 // Respond to unblock requests from content script ----------------------------------------------------------------------
 function onMessage(message) {
     if ("unblockRequested" in message) {
-        var page = {url: message.unblockRequested}
-        toggleBlockedState(page)
+        var url = message.unblockRequested
+        url = url.endsWith('/') ? url.slice(0, -1) : url;
+        unblockURLs([url], (xhttp) => {browser.tabs.reload()})
     }
 }
 
 // Blocks the page when the context menu is clicked -------------------------------------------------------------------
 function onContextMenuClicked(info, tab){
-    var page = {url: info.linkUrl}
-    toggleBlockedState(page)
+    var url = info.linkUrl
+    url = url.endsWith('/') ? url.slice(0, -1) : url;
+    console.log(`Blocking Link: ${url}`)
+    blockURLs([url], (xhttp) => {browser.tabs.reload()})
 }
 
 browser.runtime.onInstalled.addListener(initialize)

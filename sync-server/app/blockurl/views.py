@@ -51,15 +51,15 @@ class UrlsView(FlaskView):
 
     @route('/check', methods=["POST"])
     def check(self):
-        url = request.get_json()["url"]
-        return jsonify(self.database.get_url_exists(url))
+        urls = request.get_json()["urls"]
+        return jsonify(self.database.get_urls_exist(urls))
 
     @route('/block', methods=["POST"])
     def block(self):
-        url = request.get_json()["url"]
-        return jsonify(self.database.set_url(url))
+        urls = request.get_json()["urls"]
+        return jsonify(self.database.set_urls(urls))
 
     @route('/unblock', methods=["POST"])
     def unblock(self):
-        url = request.get_json()["url"]
-        return jsonify(self.database.delete_url(html.unescape(url)))
+        urls = request.get_json()["urls"]
+        return jsonify(self.database.delete_urls([html.unescape(url) for url in urls]))

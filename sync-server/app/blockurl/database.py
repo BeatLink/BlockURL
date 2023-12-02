@@ -70,29 +70,32 @@ class DatabaseManager:
         return cursor.fetchall()
 
     # URL Methods ------------------------------------------------------------------------------------------------------
-    def set_url(self, url):
+    def set_urls(self, urls):
         database = self._get_database_()
         cursor = database.cursor()
-        statement = "INSERT OR REPLACE INTO urls(url) VALUES (?)"
-        cursor.execute(statement, [url])
+        urls = [(url,) for url in urls]
+        statement = f"INSERT OR REPLACE INTO urls(url) VALUES (?)"
+        cursor.executemany(statement, urls)
         database.commit()
         return True
 
-    def delete_url(self, url):
+    def delete_urls(self, urls):
         database = self._get_database_()
         cursor = database.cursor()
-        statement = "DELETE FROM urls WHERE url = ?"
-        print(cursor.execute(statement, [url]))
+        statement = f"DELETE FROM urls WHERE url IN ({','.join(['?'] * len(urls))})"
+        cursor.execute(statement, tuple(urls))
         database.commit()
         return True
 
-    def get_url_exists(self, url):
+    def get_urls_exist(self, urls):
         database = self._get_database_()
         cursor = database.cursor()
-        statement = "SELECT url FROM urls WHERE url = ?"
-        cursor.execute(statement, [url])
-        data = cursor.fetchall()
-        return len(data) > 0
+        statement = f"""SELECT url FROM urls WHERE url IN ({','.join(['?'] * len(urls))})"""
+        cursor.execute(statement, tuple(urls))
+        database_matches = cursor.fetchall()
+        database_matches = [url[0] for url in database_matches]
+        results = {url: url in database_matches for url in urls}
+        return results
 
     def get_all_urls(self):
         database = self._get_database_()

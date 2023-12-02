@@ -27,6 +27,7 @@
     ],
     "background": {
         "scripts": ["background.js"],
+        "type": "module",
         "persistent": false
     },
     "content_scripts": [{
