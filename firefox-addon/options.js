@@ -47,9 +47,7 @@ function loadURLs(){
     console.log("Loading URLs")
     getAllURLs((xhttp) => {
         var urls = JSON.parse(xhttp.responseText)
-        urls.sort(function (a, b) {
-            return ('' + a.attr).localeCompare(b.attr);
-        })
+        urls.sort()
         var urlsList = document.getElementById("urls-list")
         urlsList.innerHTML = "";
         for (let url of urls){
