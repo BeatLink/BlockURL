@@ -73,7 +73,7 @@ class DatabaseManager:
     def set_urls(self, urls):
         database = self._get_database_()
         cursor = database.cursor()
-        urls = [(url,) for url in urls]
+        urls = [(url, ) for url in urls]
         statement = f"INSERT OR REPLACE INTO urls(url) VALUES (?)"
         cursor.executemany(statement, urls)
         database.commit()
