@@ -1,0 +1,61 @@
+:root { box-sizing: border-box; }
+*, *::before, *::after, *::marker { box-sizing: inherit; }
+
+body {
+    width: 95%;
+    height: 95%;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+body > section {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    margin: 0.5em
+}
+
+table tr > *:nth-child(1) { 
+    width: 10em;
+    min-width: 10em;
+    padding: 0.5em;
+}
+table tr > *:nth-child(2) { 
+    width: 100%; 
+    display: flex;
+    flex-direction: row;
+    justify-content: start;
+    flex-wrap: nowrap;
+}
+
+h1 {
+    color: #0088FF;
+    text-align: center;
+    font-size: xx-large;
+}
+
+h2 {
+    color: #0088FF;
+    text-align: center;
+    font-size: larger;
+}
+
+label {
+    margin: 0.5em;
+}
+
+button  {
+    margin: 0.5em;
+    min-width:fit-content;
+    text-align: center;
+}
+
+input[type=text], input[type=file]{
+    margin: 0.5em;
+    width: 100%;
+}
+
+ol > li > span {
+    float:right;
+}
