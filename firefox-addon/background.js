@@ -8,7 +8,7 @@ var contextMenu = {
   contexts: ["link"],
 }
 
-// Initialize Plugin Storage ------------------------------------------------------------------------------------------
+// Initialize Plugin Storage ==========================================================================================
 async function initialize() {
     var settings = await browser.storage.sync.get("syncServerURL")
     if (!settings | !settings['syncServerURL']){
@@ -16,13 +16,13 @@ async function initialize() {
     }
 }
 
-// Opens the settings page --------------------------------------------------------------------------------------------
+// Opens the settings page ============================================================================================
 function openSettingsPage() {
     browser.tabs.create({url: "/options/options.html"});
 }
 
 
-// Toggle Blocking For Page -------------------------------------------------------------------------------------------
+// Toggle Blocking For Page ===========================================================================================
 async function toggleBlockedState(page){
     var url = page.url
     var response = await queryURLs([url])
@@ -37,7 +37,7 @@ async function toggleBlockedState(page){
     }
 }
 
-// Respond to unblock requests from content script ----------------------------------------------------------------------
+// Respond to unblock requests from content script ======================================================================
 async function onMessage(message) {
     if ("unblockRequested" in message) {
         var urls = message.unblockRequested
@@ -55,7 +55,7 @@ async function onMessage(message) {
 
 }
 
-// Blocks the page when the context menu is clicked -------------------------------------------------------------------
+// Blocks the page when the context menu is clicked ===================================================================
 async function onContextMenuClicked(info, tab){
     console.log(`Blocking Link: ${url}`)
     var url = info.linkUrl
