@@ -64,7 +64,7 @@ async function onContextMenuClicked(info, tab){
 }
 
 browser.runtime.onInstalled.addListener(initialize)
-//browser.pageAction.onClicked.addListener(toggleBlockedState);
+browser.pageAction.onClicked.addListener(toggleBlockedState);
 browser.runtime.onMessage.addListener(onMessage)
 browser.browserAction.onClicked.addListener(openSettingsPage);
 browser.menus.create(contextMenu)
