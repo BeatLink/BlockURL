@@ -1,0 +1,53 @@
+:root { box-sizing: border-box; }
+*, *::before, *::after, *::marker { box-sizing: inherit; }
+
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+h1 {
+    color: #0088FF !important;
+    text-align: center;
+    font-size: xx-large;
+}
+
+body > section {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    margin: 0.5em
+}
+
+table tr > *:nth-child(1) { 
+    width: 10em;
+    min-width: 10em;
+    padding: 0.5em;
+}
+table tr > *:nth-child(2) { 
+    width: 100%; 
+    display: flex;
+    flex-direction: row;
+    justify-content: start;
+    flex-wrap: nowrap;
+}
+
+label {
+    margin: 0.5em;
+}
+
+input[type=text]{
+    margin: 0.5em;
+    width: 100%;
+}
+
+button  {
+    margin: 0.5em;
+    min-width:fit-content;
+    text-align: center;
+}
