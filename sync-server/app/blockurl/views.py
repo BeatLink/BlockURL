@@ -1,5 +1,5 @@
 import html
-from flask import jsonify, request
+from flask import jsonify, request, render_template
 from flask_classful import FlaskView, route
 
 
@@ -8,11 +8,7 @@ class IndexView(FlaskView):
     route_base = '/'
 
     def index(self):
-        return """
-        This is a sync server for BlockURL. <br>
-        If you are seeing this message, it has been configured correctly <br>
-        See <a href="https://github.com/BeatLink/BlockURL">https://github.com/BeatLink/BlockURL</a> for more information
-        """
+        return render_template("index.html")
 
 
 # Settings -------------------------------------------------------------------------------------------------------------
