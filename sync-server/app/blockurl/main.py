@@ -1,9 +1,14 @@
 from flask import Flask
-from .database import DatabaseManager
-from .views import IndexView, SettingsView, UrlsView
+from database import DatabaseManager
+from views import IndexView, SettingsView, UrlsView
+import os
 
 app = Flask(__name__)
-database = DatabaseManager(database_name="/app/database/blockurl.db", create_tables=True, initialize_settings=True)
+database = DatabaseManager(
+    database_name=os.environ['DATABASE_PATH'], 
+    create_tables=True, 
+    initialize_settings=True
+)
 IndexView.register(app)
 SettingsView.register(app, init_argument=database)
 UrlsView.register(app, init_argument=database)
