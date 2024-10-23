@@ -27,7 +27,7 @@ cd sync-server
 python3 -m venv venv
 source venv/bin/activate
 pip install --no-cache-dir --upgrade -r requirements.txt
-DATABASE_PATH=blockurl.db python3 app/blockurl/main.py
+DATABASE_PATH=blockurl.db python3 -m app.blockurl
 ```
 The development sync server should now be accessible at [http://localhost:8000](http://localhost:8000)
 
