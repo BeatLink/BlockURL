@@ -1,9 +1,17 @@
 # BlockURL
 
+[![Publish Docker image](https://github.com/BeatLink/BlockURL/actions/workflows/build-and-push-docker-image.yml/badge.svg)](https://github.com/BeatLink/BlockURL/actions/workflows/build-and-push-docker-image.yml)
+
 BlockURL is a firefox extension to block a specific URL or link. Unlike other blockers, it doesnt work on a domain or subdomain but a specific url. This is mainly useful for blocking visited articles, videos, pages and other content
 
-## Sync Server
 BlockURL uses a Python Flask Sync Server in order to store all of the URLs that are blocked as well as the text for the blocked page. This sync server is hosted on DockerHub
+
+## Features
+- Configuration of Blocked Page
+- Import and Export of Block Lists
+- One Click Blocking
+- Blocks specific URL or page instead of domain
+- Unlimited storage size for blocklist
 
 
 ## Usage
@@ -32,3 +40,11 @@ The publishing is handled by Github Actions.
 
 1. Create a release explaining the changes
 2. Github Actions should build the sync server automatically
+
+#### Publishing to Firefox Addon Store
+1. Run the Following
+```bash
+cd firefox-addon
+zip -r -FS ../blockurl.zip * --exclude '*.git*'.
+```
+2. Go to [https://addons.mozilla.org/en-US/developers/addon/blockurl/versions/submit/](https://addons.mozilla.org/en-US/developers/addon/blockurl/versions/submit/)
