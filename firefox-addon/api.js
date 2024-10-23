@@ -6,52 +6,45 @@ export function removeTrailingSlashes(urls){
     return urls
 }
 
-function sendPOST(endpoint, payload, callback, callbackArgs){
-    browser.storage.sync.get("syncServerURL").then((settings) => {
-        const syncServerURL = settings["syncServerURL"]
-        const xhttp = new XMLHttpRequest();
-        xhttp.onload = () => { callback(xhttp, callbackArgs) }
-        xhttp.open("POST", `${syncServerURL}/${endpoint}`, true);
-        xhttp.setRequestHeader("Content-type", "application/json;charset=UTF-8");
-        xhttp.send(JSON.stringify(payload));
-    })
-}
-
-function sendGET(endpoint, callback, callbackArgs){
-    browser.storage.sync.get("syncServerURL").then((settings) => {
-        const syncServerURL = settings["syncServerURL"]
-        const xhttp = new XMLHttpRequest();
-        xhttp.onload = () => { callback(xhttp, callbackArgs) }
-        xhttp.open("GET", `${syncServerURL}/${endpoint}`, true);
-        xhttp.send();
-    })
+async function sendRequest(method, endpoint, payload=null) {
+    const settings = await browser.storage.sync.get("syncServerURL")
+    const syncServerURL = settings["syncServerURL"]
+    let requests = {
+        "GET": new Request(`${syncServerURL}/${endpoint}`),
+        "POST": new Request(
+            `${syncServerURL}/${endpoint}`, 
+            {
+                method: "POST",
+                RequestMode:'cors',
+                headers: { "Content-Type": "application/json;charset=UTF-8" },
+                body: JSON.stringify(payload)
+            }
+        )    
+    }
+    return (await fetch(requests[method])).json();
 }
 
 // Settings Functions =================================================================================================
-export function getSetting(key, callback, callbackArgs){
-    sendPOST("settings/get", {"key": key}, callback, callbackArgs)
-}
-
-export function saveSetting(key, value, callback, callbackArgs) {
-    sendPOST("settings/set", {"key": key, "value": value}, callback, callbackArgs)
+export async function getSetting(key){
+    return await sendRequest("POST", "settings/get", {"key": key})
 }
 
 // URL Functions ======================================================================================================
-export function getAllURLs(callback, callbackArgs) {
-    sendGET("urls/all", callback, callbackArgs)
+export async function getAllURLs() {
+    return await sendRequest("GET", "urls/all", null)
 }
 
-export function queryURLs(urls, callback, callbackArgs){
+export async function queryURLs(urls){
     urls = removeTrailingSlashes(urls)
-    sendPOST("urls/check", {"urls": urls}, callback, callbackArgs)
+    return await sendRequest("POST", "urls/check", {"urls": urls})
 }
 
-export function blockURLs(urls, callback, callbackArgs) {
+export async function blockURLs(urls) {
     urls = removeTrailingSlashes(urls)
-    sendPOST("urls/block", {"urls": urls}, callback, callbackArgs)
+    return await sendRequest("POST", "urls/block", {"urls": urls})
 }
 
-export function unblockURLs(urls, callback, callbackArgs){
+export async function unblockURLs(urls){
     urls = removeTrailingSlashes(urls)
-    sendPOST("urls/unblock", {"urls": urls}, callback, callbackArgs)
+    return await sendRequest("POST", "urls/unblock", {"urls": urls})
 }
