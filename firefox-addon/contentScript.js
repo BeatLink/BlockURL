@@ -4,140 +4,71 @@
     If the page shouldn't be blocked, instead it checks to see if links within the page should be blocked
 */
 
-// Helper Functions ===================================================================================================
+"use strict";
 
-import(browser.runtime.getURL('api.js')).then((module) => {
-
-    function queryURLs (urls, callback, callbackArgs){
-        module.queryURLs(urls, callback, callbackArgs)
-    }
-
+async function blockURLContentScript() {
+    // Unblock ============================================================================================================
     function unblock(){
-        browser.runtime.sendMessage({unblockRequested: window.location.href})
+        browser.runtime.sendMessage({unblockRequested: [window.location.href]})
     }
 
     // Blocking Page ======================================================================================================
-    "use strict";
-
-    function blockPage(){
+    async function blockPage(){
         console.log("Blocking: " + window.location.href);
-
-        // Setup Document
-        document.documentElement.innerHTML = '';
-        document.body.style = `
-            margin: 0;
-            background-color: #f6f6f6; 
-            color: #000;
-            font-size: 16px;
-            font-family: sans-serif; 
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            width:100%;
-        `
-
-        // Create Header
-        const heading = document.createElement("h1");
-        heading.style = `
-            color: #000;
-            background-color: #f6f6f6; 
-            font-family: sans-serif; 
-            font-size: 4em;
-            font-weight: normal;
-            margin: 0.25em;
-            padding: 0.25em;
-            border-bottom: 1px solid #a2a9b1;
-            overflow: hidden;
-        `
-        document.body.appendChild(heading);
-        
-        // Create Paragraph
-        const body = document.createElement('p')
-        body.style = `
-            color: #000;
-            font-family: sans-serif; 
-            font-size: 1.5em;
-            margin: 0;
-        `
-        document.body.appendChild(body)
-        
-        // Setup Button
-        let button = document.createElement('button')
-        button.style = `
-            display: inline-flex;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            font-size: 1.5em;
-            line-height: 1.2;
-            color: #FFFFFF;
-            background-color: #0088FF;
-            margin: 1.5em;
-            padding: 0.5em;
-            border: 2px solid transparent;
-            border-radius: 0.5em;
-        `
+        const html = await (await fetch(browser.runtime.getURL("blocked.html"))).text()
+        document.querySelector('html').innerHTML = html;
+        var button = document.getElementById("button")
         button.addEventListener("click", unblock);
-        document.body.appendChild(button)
-
         let settingsDict = {
-            "blocked_page_heading_text": heading,
-            "blocked_page_body_text": body,
-            "blocked_page_button_text": button
+            "blocked_page_heading_text": document.getElementById("heading"),
+            "blocked_page_body_text": document.getElementById("text"),
+            "blocked_page_button_text": document.getElementById("button")
         }
-        
-        for (key in settingsDict){
-            module.getSetting(key, (xhttp, key) => {
-                settingsDict[key].textContent = xhttp.responseText.replaceAll('"', '');
-            }, key)    
+        for (var key in settingsDict){
+            var response = await browser.runtime.sendMessage({getSetting: key})
+            settingsDict[key].textContent = response.replaceAll('"', '');
         }
     }
 
     // Block Links on page ================================================================================================
-    function createBlockedLinksStyle(){
-        // Create CSS Class for blocked links
-        var css = '.blockurl-hide { display: none !important; }'
-        var head = document.head || document.getElementsByTagName('head')[0]
-        var style = document.createElement('style');
-        head.appendChild(style);
-        style.appendChild(document.createTextNode(css));
-    }
-
-    function blockLinks(){
+    async function blockLinks(){
         console.log("Blocking matching links on current page")
-        createBlockedLinksStyle()
-        var links = [...document.getElementsByTagName("a")];
-        var urls = links.map((link) => link.href);        
-        queryURLs(urls, (xhttp, links) => {
-            var results = JSON.parse(xhttp.responseText)
-            for (var link of links){
-                var url = link.href 
+        // Find all blocked links and block them
+        var urlMap = new Object();
+        var types = {
+            "a": "href",
+            "img": "src" 
+        }
+        for (var type in types){
+            var elements = [...document.querySelectorAll(type)]
+            elements.forEach((element, _) => { 
+                url = element[types[type]]
                 url = url.endsWith('/') ? url.slice(0, -1) : url;
-                if (results[url]){
-                    link.classList.add("blockurl-hide")
-                }
+                urlMap[url] = element 
+            })
+        }
+        var urls = Object.keys(urlMap)
+        var response = await browser.runtime.sendMessage({queryURLs: urls})
+        for (var url in response){
+            if (response[url]) {
+                urlMap[url].style.setProperty('display', 'none', 'important');
             }
-        }, links)
+        }
     }     
 
-
-
     // Main ===============================================================================================================
-    function main_script() {
+    async function main_script() {
         console.log("Checking to see if page should be blocked")
         var url = window.location.href
         url = url.endsWith('/') ? url.slice(0, -1) : url;
-        queryURLs([url], (xhttp) => {
-            var results = JSON.parse(xhttp.responseText)
-            if (results[url]) {
-                blockPage()
-            } else {
-                blockLinks()
-            }
-        })
+        var response = await browser.runtime.sendMessage({queryURLs: [url]})
+        if (response[url]) {
+            blockPage()
+        } else {
+            blockLinks()
+        }
     }
-
     main_script()
-})
+}
+
+window.addEventListener('load', blockURLContentScript)
