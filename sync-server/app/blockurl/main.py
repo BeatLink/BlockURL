@@ -1,7 +1,7 @@
-from flask import Flask
-from database import DatabaseManager
-from views import IndexView, SettingsView, UrlsView
 import os
+from flask import Flask
+from .database import DatabaseManager
+from .views import IndexView, SettingsView, UrlsView
 
 app = Flask(__name__)
 database = DatabaseManager(
