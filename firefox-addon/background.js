@@ -1,6 +1,6 @@
 "use strict";
 
-import { queryURLs, blockURLs, unblockURLs } from "/api.js"
+import { queryURLs, blockURLs, unblockURLs, getSetting } from "/api.js"
 
 var contextMenu = {
   id: "block-selected-link",
@@ -9,55 +9,62 @@ var contextMenu = {
 }
 
 // Initialize Plugin Storage ------------------------------------------------------------------------------------------
-function initialize() {
-    browser.storage.sync.get("syncServerURL").then((settings) => {
-        if (!settings | !settings['syncServerURL']){
-            browser.storage.sync.set({"syncServerURL": "http://127.0.0.1:8000"})
-        }
-    })
+async function initialize() {
+    var settings = await browser.storage.sync.get("syncServerURL")
+    if (!settings | !settings['syncServerURL']){
+        browser.storage.sync.set({"syncServerURL": "http://127.0.0.1:8000"})
+    }
 }
 
 // Opens the settings page --------------------------------------------------------------------------------------------
 function openSettingsPage() {
-    browser.tabs.create({url: "/options.html"});
+    browser.tabs.create({url: "/options/options.html"});
 }
 
 
 // Toggle Blocking For Page -------------------------------------------------------------------------------------------
-function toggleBlockedState(page){
+async function toggleBlockedState(page){
     var url = page.url
-    url = url.endsWith('/') ? url.slice(0, -1) : url;
-    queryURLs([url], (xhttp) => {
-        var response = JSON.parse(xhttp.responseText)
-        if (response[url]) {
-            console.log("Removing from Blocklist: " + url)
-            unblockURLs([url], (xhttp) => {browser.tabs.reload()})
-        } else {
-            console.log("Adding to Blocklist: " + url)
-            blockURLs([url], (xhttp) => {browser.tabs.reload()})
-        }
-    })    
-}
-
-// Respond to unblock requests from content script ----------------------------------------------------------------------
-function onMessage(message) {
-    if ("unblockRequested" in message) {
-        var url = message.unblockRequested
-        url = url.endsWith('/') ? url.slice(0, -1) : url;
-        unblockURLs([url], (xhttp) => {browser.tabs.reload()})
+    var response = await queryURLs([url])
+    if (response[url]) {
+        console.log("Removing from Blocklist: " + url)
+        await unblockURLs([url])
+        browser.tabs.reload()
+    } else {
+        console.log("Adding to Blocklist: " + url)
+        await blockURLs([url])
+        browser.tabs.reload()
     }
 }
 
+// Respond to unblock requests from content script ----------------------------------------------------------------------
+async function onMessage(message) {
+    if ("unblockRequested" in message) {
+        var urls = message.unblockRequested
+        await unblockURLs(urls)
+        browser.tabs.reload()
+    }
+    if ("queryURLs" in message) {
+        var urls = message.queryURLs
+        return await queryURLs(urls)
+    }
+    if ("getSetting" in message){
+        var key = message.getSetting
+        return await getSetting(key)
+    }
+
+}
+
 // Blocks the page when the context menu is clicked -------------------------------------------------------------------
-function onContextMenuClicked(info, tab){
-    var url = info.linkUrl
-    url = url.endsWith('/') ? url.slice(0, -1) : url;
+async function onContextMenuClicked(info, tab){
     console.log(`Blocking Link: ${url}`)
-    blockURLs([url], (xhttp) => {browser.tabs.reload()})
+    var url = info.linkUrl
+    await blockURLs([url])
+    browser.tabs.reload()
 }
 
 browser.runtime.onInstalled.addListener(initialize)
-browser.pageAction.onClicked.addListener(toggleBlockedState);
+//browser.pageAction.onClicked.addListener(toggleBlockedState);
 browser.runtime.onMessage.addListener(onMessage)
 browser.browserAction.onClicked.addListener(openSettingsPage);
 browser.menus.create(contextMenu)
