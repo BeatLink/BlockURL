@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta charset="utf-8">
+        <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    </head>
+    <body>
+        <h1>BlockURL Sync Server</h1>
+        <section id="blocked-page-section">
+            <h2>Blocked Page Settings</h2>
+            <table>
+                <tr>
+                    <td><label>Heading Text</label></td>
+                    <td><input type="text" id="heading-text-entry"></td>
+                </tr>
+                <tr>
+                    <td><label>Body Text</label></td>
+                    <td><input type="text" id="body-text-entry"></td>
+                </tr>
+                <tr>
+                    <td><label>Button Text</label></td>
+                    <td><input type="text" id="button-text-entry"></td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td><button id="save-settings-button">Save Settings</button></td>
+                </tr>
+            </table>            
+        </section>
+        <section id="urls-section">
+            <h2>Import & Export</h2>
+            <table>
+                <tr>
+                    <td><label>Import URLs</label></td>
+                    <td>
+                        <input id="urls-file-button" type="file" name="urls-file" accept="text">
+                        <button id="append-urls-button">Append URLs</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td><label>Export URLs</label></td>
+                    <td><button id="export-urls-button">Export URLs</button></td>
+                </tr>
+            </table>
+
+        </section>
+        <section>
+            <h2>URL List</h2>
+            <table>
+                <tr>
+                    <td><label>Add URL</label></td>
+                    <td>
+                        <input type="text" id="add-url-entry">
+                        <button id="add-url-button">Add Url</button>
+                    </td>
+                </tr>
+            </table>
+            <ol id="urls-list">
+            </ol>
+        </section>
+        <script type="module" src="{{ url_for('static', filename='index.js') }}"></script>
+    </body>
+</html>
