@@ -68,6 +68,15 @@ async function blockURLContentScript() {
         console.log("Checking to see if page should be blocked")
         var url = window.location.href
         url = url.endsWith('/') ? url.slice(0, -1) : url;
+
+        // Prevents running on its own sync server page
+        var settings = await browser.storage.sync.get("syncServerURL")
+        var syncServerURL = settings["syncServerURL"]
+        syncServerURL = syncServerURL.endsWith('/') ? syncServerURL.slice(0, -1) : syncServerURL;
+        if (url == syncServerURL) {
+            return
+        }
+
         var response = await browser.runtime.sendMessage({queryURLs: [url]})
         if (response[url]) {
             blockPage()
