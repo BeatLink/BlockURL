@@ -1,5 +1,5 @@
 /*
-    This content script runs on every page. First it queries the api to find out if the page should be blocked. 
+    This content script runs on every page. First it queries the api to find out if the page should be blocked.
     If the page should be blocked, it loads the blocked page
     If the page shouldn't be blocked, instead it checks to see if links within the page should be blocked
 */
@@ -37,24 +37,31 @@ async function blockURLContentScript() {
         var urlMap = new Object();
         var types = {
             "a": "href",
-            "img": "src" 
+            "img": "src"
         }
         for (var type in types){
             var elements = [...document.querySelectorAll(type)]
-            elements.forEach((element, _) => { 
+            elements.forEach((element, _) => {
                 url = element[types[type]]
                 url = url.endsWith('/') ? url.slice(0, -1) : url;
-                urlMap[url] = element 
+                if (url in urlMap) {
+                    urlMap[url].push(element)
+                } else {
+                    urlMap[url] = []
+                    urlMap[url].push(element)
+                }
+
             })
         }
         var urls = Object.keys(urlMap)
         var response = await browser.runtime.sendMessage({queryURLs: urls})
         for (var url in response){
             if (response[url]) {
-                urlMap[url].style.setProperty('display', 'none', 'important');
+                for (var element of urlMap[url])
+                element.style.setProperty('display', 'none', 'important');
             }
         }
-    }     
+    }
 
     // Main ===============================================================================================================
     async function main_script() {
@@ -65,10 +72,19 @@ async function blockURLContentScript() {
         if (response[url]) {
             blockPage()
         } else {
+            const body = document.body;
+            const observerOptions = {
+                childList: true,
+                subtree: true,
+            };
+
+            const observer = new MutationObserver(blockLinks);
+            observer.observe(document.body, observerOptions);
+
             blockLinks()
         }
     }
     main_script()
 }
 
-window.addEventListener('load', blockURLContentScript)
+blockURLContentScript()
