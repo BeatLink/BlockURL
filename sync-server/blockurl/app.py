@@ -13,7 +13,7 @@ app.register_blueprint(index_bp)
 app.register_blueprint(init_settings(database))
 app.register_blueprint(init_urls(database))
 
-if __name__ == '__main__':
+def main():
     host = os.environ.get('BLOCKURL_HOST', '0.0.0.0')
     port = int(os.environ.get('BLOCKURL_PORT', 8000))
     app.run(host=host, port=port, debug=True)
