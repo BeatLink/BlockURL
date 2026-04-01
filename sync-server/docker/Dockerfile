@@ -4,10 +4,10 @@ RUN pip install --no-cache-dir uwsgi
 
 WORKDIR /app
 
-COPY ./requirements.txt .
+COPY ../requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY .. .
 
 ENV DATABASE_PATH=/app/database/blockurl.db
 ENV BLOCKURL_HOST=0.0.0.0
