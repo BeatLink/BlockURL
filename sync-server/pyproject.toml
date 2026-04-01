@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "blockurl"
+version = "4.0.6"
+description = "BlockURL uWSGI application"
+readme = "../README.md"
+requires-python = ">=3.8"
+
+dependencies = [
+    "flask",
+]
+
+[project.scripts]
+blockurl = "blockurl.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
