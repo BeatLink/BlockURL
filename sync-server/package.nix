@@ -1,7 +1,6 @@
 {
     lib,
     python3,
-    src ? ./.,
 }:
 
 let
@@ -15,7 +14,7 @@ pythonEnv.pkgs.buildPythonApplication {
     pname = "blockurl";
     version = "4.0.6";
 
-    src = src;
+    src = ./.;
 
     format = "other"; # not a standard setuptools/pyproject package
 
