@@ -34,7 +34,7 @@ python3.pkgs.buildPythonApplication {
         export DATABASE_PATH=\''${DATABASE_PATH:-/var/lib/blockurl/blockurl.db}
         exec ${uwsgiWithPython}/bin/uwsgi \
           --ini $out/etc/blockurl/uwsgi.ini \
-          --python-home ${pythonEnv}
+          --home ${pythonEnv}
         EOF
         chmod +x $out/bin/blockurl-server
     '';
