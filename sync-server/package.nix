@@ -4,11 +4,11 @@
     uwsgi,
 }:
 let
-    pythonEnv = python3.withPackages (
-        ps: with ps; [
-            flask
-        ]
-    );
+    pythonEnv = python3.withPackages (ps: with ps; [ flask ]);
+    uwsgiWithPython = uwsgi.override {
+        plugins = [ "python3" ];
+        python3 = pythonEnv;
+    };
 in
 python3.pkgs.buildPythonApplication {
     pname = "blockurl";
@@ -23,20 +23,18 @@ python3.pkgs.buildPythonApplication {
     propagatedBuildInputs = with python3.pkgs; [ flask ];
 
     postInstall = ''
-        # Copy uwsgi.ini into the package output
         mkdir -p $out/etc/blockurl
         cp ${./uwsgi.ini} $out/etc/blockurl/uwsgi.ini
 
-        # Write a launcher that invokes uwsgi with the correct python path
         mkdir -p $out/bin
         cat > $out/bin/blockurl-server << EOF
         #!/bin/sh
         export HOST=\''${HOST:-0.0.0.0}
         export PORT=\''${PORT:-8000}
         export DATABASE_PATH=\''${DATABASE_PATH:-/var/lib/blockurl/blockurl.db}
-        exec ${uwsgi}/bin/uwsgi \
+        exec ${uwsgiWithPython}/bin/uwsgi \
           --ini $out/etc/blockurl/uwsgi.ini \
-          --pythonpath ${pythonEnv}/${pythonEnv.sitePackages}
+          --python-home ${pythonEnv}
         EOF
         chmod +x $out/bin/blockurl-server
     '';
