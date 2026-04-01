@@ -13,7 +13,7 @@ in
 pythonEnv.pkgs.buildPythonApplication {
     pname = "blockurl";
     version = "4.0.6";
-    src = ./.;
+    src = ./..;
     format = "other";
 
     propagatedBuildInputs = [
@@ -28,7 +28,7 @@ pythonEnv.pkgs.buildPythonApplication {
 
         # Copy the package into the output
         mkdir -p $out/lib/blockurl
-        cp -r ../blockurl $out/lib/blockurl/blockurl
+        cp -r blockurl $out/lib/blockurl/blockurl
         cp uwsgi.ini $out/lib/blockurl/uwsgi.ini
 
         # Write a launcher script
