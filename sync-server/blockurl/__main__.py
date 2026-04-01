@@ -15,11 +15,12 @@ def create_app():
     app.register_blueprint(init_urls(database))
     return app
 
-def launch_app():
-    app = create_app()
+def launch_app(app):
     host = os.environ.get('BLOCKURL_HOST', '0.0.0.0')
     port = int(os.environ.get('BLOCKURL_PORT', 8000))
     app.run(host=host, port=port, debug=True)
 
+app = create_app()
+
 if __name__ == '__main__':
-    launch_app()
+    launch_app(app)
