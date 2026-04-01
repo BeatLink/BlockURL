@@ -11,10 +11,12 @@ requires-python = ">=3.8"
 
 dependencies = [
     "flask",
+    "uvicorn",
+    "asgiref",
 ]
 
 [project.scripts]
-blockurl = "blockurl.__main__:main"
+blockurl-server = "blockurl.__main__:launch_app"
 
 [tool.setuptools.packages.find]
 where = ["."]
