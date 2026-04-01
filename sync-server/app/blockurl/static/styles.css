@@ -1,61 +1,319 @@
-:root { box-sizing: border-box; }
-*, *::before, *::after, *::marker { box-sizing: inherit; }
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap');
+
+/* ── Variables ──────────────────────────────────────────────────────────── */
+:root {
+    --blue: #00acff;
+    --blue-dim: #00acff22;
+    --blue-mid: #0090d4;
+    --white: #ffffff;
+    --surface: #f4f9fe;
+    --card: #ffffff;
+    --border: #d6edf9;
+    --text: #0f2233;
+    --muted: #6b8fa8;
+    --radius: 14px;
+    --shadow: 0 2px 16px 0 #00acff18, 0 1px 4px 0 #00000010;
+    --shadow-hover: 0 6px 28px 0 #00acff28, 0 2px 8px 0 #00000014;
+    --transition: 0.18s cubic-bezier(.4, 0, .2, 1);
+}
+
+/* ── Reset & Base ───────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
 
 body {
-    width: 95%;
-    height: 95%;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
+    font-family: 'DM Sans', sans-serif;
+    background: var(--surface);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 36px 20px 60px;
+    /* subtle grid pattern */
+    background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
 }
 
-body > section {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    margin: 0.5em
-}
-
-table tr > *:nth-child(1) { 
-    width: 10em;
-    min-width: 10em;
-    padding: 0.5em;
-}
-table tr > *:nth-child(2) { 
-    width: 100%; 
-    display: flex;
-    flex-direction: row;
-    justify-content: start;
-    flex-wrap: nowrap;
-}
-
+/* ── Page Header ────────────────────────────────────────────────────────── */
 h1 {
-    color: #0088FF;
-    text-align: center;
-    font-size: xx-large;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.03em;
+    margin-bottom: 36px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
+h1::before {
+    content: '';
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--blue);
+    box-shadow: 0 0 0 4px var(--blue-dim), 0 0 0 8px #00acff0a;
+    flex-shrink: 0;
+    animation: pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 4px var(--blue-dim), 0 0 0 8px #00acff0a;
+    }
+
+    50% {
+        box-shadow: 0 0 0 7px var(--blue-dim), 0 0 0 14px #00acff06;
+    }
+}
+
+/* ── Layout ─────────────────────────────────────────────────────────────── */
+body>section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 30px;
+    margin-bottom: 24px;
+    transition: box-shadow var(--transition), transform var(--transition);
+}
+
+body>section:hover {
+    box-shadow: var(--shadow-hover);
+    transform: translateY(-1px);
+}
+
+/* ── Section Headings ───────────────────────────────────────────────────── */
 h2 {
-    color: #0088FF;
-    text-align: center;
-    font-size: larger;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--blue-mid);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1.5px solid var(--border);
+    position: relative;
 }
 
+h2::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -1.5px;
+    width: 36px;
+    height: 1.5px;
+    background: var(--blue);
+    border-radius: 2px;
+}
+
+/* ── Tables ─────────────────────────────────────────────────────────────── */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+tr {
+    vertical-align: middle;
+}
+
+td {
+    padding: 8px 0;
+}
+
+td:first-child {
+    width: 140px;
+    padding-right: 16px;
+}
+
+/* ── Labels ─────────────────────────────────────────────────────────────── */
 label {
-    margin: 0.5em;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--muted);
+    white-space: nowrap;
 }
 
-button  {
-    margin: 0.5em;
-    min-width:fit-content;
-    text-align: center;
-}
-
-input[type=text], input[type=file]{
-    margin: 0.5em;
+/* ── Inputs ─────────────────────────────────────────────────────────────── */
+input[type="text"],
+input[type="file"] {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.92rem;
+    color: var(--text);
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    outline: none;
+    transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
     width: 100%;
 }
 
-ol > li > span {
-    float:right;
+input[type="text"]:focus {
+    border-color: var(--blue);
+    background: var(--white);
+    box-shadow: 0 0 0 3px var(--blue-dim);
+}
+
+input[type="file"] {
+    cursor: pointer;
+}
+
+input[type="file"]::file-selector-button {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    background: var(--blue-dim);
+    color: var(--blue-mid);
+    border: 1px solid var(--blue);
+    border-radius: 6px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: background var(--transition);
+    margin-right: 10px;
+}
+
+input[type="file"]::file-selector-button:hover {
+    background: var(--blue);
+    color: var(--white);
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+button {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 8px;
+    padding: 8px 18px;
+    border: none;
+    transition: background var(--transition), box-shadow var(--transition), transform var(--transition);
+    white-space: nowrap;
+}
+
+/* Primary buttons */
+#save-settings-button,
+#append-urls-button,
+#export-urls-button,
+#add-url-button,
+#delete-button {
+    background: var(--blue);
+    color: var(--white);
+    box-shadow: 0 2px 8px #00acff30;
+}
+
+#save-settings-button:hover,
+#append-urls-button:hover,
+#export-urls-button:hover,
+#add-url-button:hover,
+#delete-button:hover {
+    background: var(--blue-mid);
+    box-shadow: 0 4px 14px #00acff40;
+    transform: translateY(-1px);
+}
+
+#save-settings-button:active,
+#append-urls-button:active,
+#export-urls-button:active,
+#add-url-button:active,
+#delete-button:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+/* ── Import row: file + button inline ───────────────────────────────────── */
+#urls-section td:last-child {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: nowrap;
+}
+
+input[type="file"] {
+    flex: 1 1 0;
+    min-width: 0;
+    cursor: pointer;
+}
+
+/* ── Add URL row ─────────────────────────────────────────────────────────── */
+#urls-section~section td:last-child,
+section:last-of-type td:last-child {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* ── URL Ordered List ────────────────────────────────────────────────────── */
+#urls-list {
+    list-style: none;
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0;
+    counter-reset: url-counter;
+}
+
+#urls-list li {
+    counter-increment: url-counter;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    transition: border-color var(--transition), background var(--transition);
+    position: relative;
+}
+
+#urls-list li::before {
+    content: counter(url-counter);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--white);
+    background: var(--blue);
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+#urls-list li a {
+    width: 100%;
+}
+
+#urls-list li:hover {
+    border-color: var(--blue);
+    background: var(--white);
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 520px) {
+    body>section {
+        padding: 20px 16px;
+    }
+
+    td:first-child {
+        display: none;
+    }
+
+    input[type="text"] {
+        max-width: 100%;
+    }
 }
