@@ -10,39 +10,35 @@ let
         ]
     );
 in
-pythonEnv.pkgs.buildPythonApplication {
+python3.pkgs.buildPythonApplication {
     pname = "blockurl";
     version = "4.0.6";
     src = ./..;
-    format = "other";
+    format = "pyproject";
 
-    propagatedBuildInputs = [
-        pythonEnv
-        uwsgi
+    nativeBuildInputs = with python3.pkgs; [
+        setuptools
+        wheel
     ];
+    propagatedBuildInputs = with python3.pkgs; [ flask ];
 
-    dontBuild = true;
+    postInstall = ''
+        # Copy uwsgi.ini into the package output
+        mkdir -p $out/etc/blockurl
+        cp ${../uwsgi.ini} $out/etc/blockurl/uwsgi.ini
 
-    installPhase = ''
-        runHook preInstall
-
-        # Copy the package into the output
-        mkdir -p $out/lib/blockurl
-        cp -r blockurl $out/lib/blockurl/blockurl
-        cp uwsgi.ini $out/lib/blockurl/uwsgi.ini
-
-        # Write a launcher script
+        # Write a launcher that invokes uwsgi with the correct python path
         mkdir -p $out/bin
         cat > $out/bin/blockurl-server << EOF
         #!/bin/sh
-        export BLOCKURL_HOST=\''${BLOCKURL_HOST:-0.0.0.0}
-        export BLOCKURL_PORT=\''${BLOCKURL_PORT:-8000}
+        export HOST=\''${HOST:-0.0.0.0}
+        export PORT=\''${PORT:-8000}
         export DATABASE_PATH=\''${DATABASE_PATH:-/var/lib/blockurl/blockurl.db}
-        exec ${uwsgi}/bin/uwsgi --ini $out/lib/blockurl/uwsgi.ini --chdir $out/lib/blockurl --env PYTHONPATH=$out/lib/blockurl
+        exec ${uwsgi}/bin/uwsgi \
+          --ini $out/etc/blockurl/uwsgi.ini \
+          --pythonpath ${pythonEnv}/${pythonEnv.sitePackages}
         EOF
         chmod +x $out/bin/blockurl-server
-
-        runHook postInstall
     '';
 
     meta = with lib; {
