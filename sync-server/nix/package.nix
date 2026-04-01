@@ -1,12 +1,12 @@
 {
     lib,
     python3,
+    uwsgi,
 }:
 let
     pythonEnv = python3.withPackages (
         ps: with ps; [
             flask
-            uwsgi
         ]
     );
 in
@@ -16,7 +16,10 @@ pythonEnv.pkgs.buildPythonApplication {
     src = ./.;
     format = "other";
 
-    propagatedBuildInputs = [ pythonEnv ];
+    propagatedBuildInputs = [
+        pythonEnv
+        uwsgi
+    ];
 
     dontBuild = true;
 
@@ -35,7 +38,7 @@ pythonEnv.pkgs.buildPythonApplication {
         export BLOCKURL_HOST=\''${BLOCKURL_HOST:-0.0.0.0}
         export BLOCKURL_PORT=\''${BLOCKURL_PORT:-8000}
         export DATABASE_PATH=\''${DATABASE_PATH:-/var/lib/blockurl/blockurl.db}
-        exec ${pythonEnv}/bin/uwsgi --ini $out/lib/blockurl/uwsgi.ini --chdir $out/lib/blockurl
+        exec ${uwsgi}/bin/uwsgi --ini $out/lib/blockurl/uwsgi.ini --chdir $out/lib/blockurl
         EOF
         chmod +x $out/bin/blockurl-server
 
