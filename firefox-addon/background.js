@@ -1,30 +1,30 @@
-"use strict";
+"use strict"
 
-import { queryURLs, blockURLs, unblockURLs, getSetting } from "/api.js"
+import { queryURLs, blockURLs, unblockURLs, getSetting, removeTrailingSlashes } from "/api.js"
 
 var contextMenu = {
-  id: "block-selected-link",
-  title: "Block This Link",
-  contexts: ["link"],
+    id: "block-selected-link",
+    title: "Block This Link",
+    contexts: ["link"],
 }
 
 // Initialize Plugin Storage ==========================================================================================
 async function initialize() {
     var settings = await browser.storage.sync.get("syncServerURL")
-    if (!settings | !settings['syncServerURL']){
-        browser.storage.sync.set({"syncServerURL": "http://127.0.0.1:8000"})
+    if (!settings | !settings['syncServerURL']) {
+        browser.storage.sync.set({ "syncServerURL": "http://127.0.0.1:8000" })
     }
 }
 
 // Opens the settings page ============================================================================================
 function openSettingsPage() {
-    browser.tabs.create({url: "/options/options.html"});
+    browser.tabs.create({ url: "/options/options.html" })
 }
 
 
 // Toggle Blocking For Page ===========================================================================================
-async function toggleBlockedState(page){
-    var url = page.url
+async function toggleBlockedState(page) {
+    var url = removeTrailingSlashes(page.url)
     var response = await queryURLs([url])
     if (response[url]) {
         console.log("Removing from Blocklist: " + url)
@@ -48,7 +48,7 @@ async function onMessage(message) {
         var urls = message.queryURLs
         return await queryURLs(urls)
     }
-    if ("getSetting" in message){
+    if ("getSetting" in message) {
         var key = message.getSetting
         return await getSetting(key)
     }
@@ -56,7 +56,7 @@ async function onMessage(message) {
 }
 
 // Blocks the page when the context menu is clicked ===================================================================
-async function onContextMenuClicked(info, tab){
+async function onContextMenuClicked(info, tab) {
     console.log(`Blocking Link: ${url}`)
     var url = info.linkUrl
     await blockURLs([url])
@@ -64,8 +64,8 @@ async function onContextMenuClicked(info, tab){
 }
 
 browser.runtime.onInstalled.addListener(initialize)
-browser.pageAction.onClicked.addListener(toggleBlockedState);
+browser.pageAction.onClicked.addListener(toggleBlockedState)
 browser.runtime.onMessage.addListener(onMessage)
-browser.browserAction.onClicked.addListener(openSettingsPage);
+browser.browserAction.onClicked.addListener(openSettingsPage)
 browser.menus.create(contextMenu)
 browser.menus.onClicked.addListener(onContextMenuClicked)
