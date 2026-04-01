@@ -13,7 +13,7 @@ in
 python3.pkgs.buildPythonApplication {
     pname = "blockurl";
     version = "4.0.6";
-    src = ./..;
+    src = ./.;
     format = "pyproject";
 
     nativeBuildInputs = with python3.pkgs; [
@@ -25,7 +25,7 @@ python3.pkgs.buildPythonApplication {
     postInstall = ''
         # Copy uwsgi.ini into the package output
         mkdir -p $out/etc/blockurl
-        cp ${../uwsgi.ini} $out/etc/blockurl/uwsgi.ini
+        cp ${./uwsgi.ini} $out/etc/blockurl/uwsgi.ini
 
         # Write a launcher that invokes uwsgi with the correct python path
         mkdir -p $out/bin
