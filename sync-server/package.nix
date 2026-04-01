@@ -15,6 +15,7 @@ python3.pkgs.buildPythonApplication {
     propagatedBuildInputs = with python3.pkgs; [
         flask
         uvicorn
+        asgiref
     ];
 
     meta = with lib; {
