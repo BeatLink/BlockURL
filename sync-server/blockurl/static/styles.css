@@ -285,13 +285,14 @@ section:last-of-type td:last-child {
     font-weight: 700;
     color: var(--white);
     background: var(--blue);
-    border-radius: 50%;
-    width: 22px;
+    border-radius: 50vh;
+    width: fit-content;
     height: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    padding: 0.5rem;
 }
 
 #urls-list li a {
