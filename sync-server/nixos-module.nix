@@ -38,7 +38,7 @@ in
         };
 
         dataDir = mkOption {
-            type = types.path;
+            type = types.str;
             default = "/var/lib/blockurl";
             description = "Directory for persistent data (SQLite database).";
         };
