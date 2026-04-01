@@ -38,7 +38,7 @@ pythonEnv.pkgs.buildPythonApplication {
         export BLOCKURL_HOST=\''${BLOCKURL_HOST:-0.0.0.0}
         export BLOCKURL_PORT=\''${BLOCKURL_PORT:-8000}
         export DATABASE_PATH=\''${DATABASE_PATH:-/var/lib/blockurl/blockurl.db}
-        exec ${uwsgi}/bin/uwsgi --ini $out/lib/blockurl/uwsgi.ini --chdir $out/lib/blockurl
+        exec ${uwsgi}/bin/uwsgi --ini $out/lib/blockurl/uwsgi.ini --chdir $out/lib/blockurl --env PYTHONPATH=$out/lib/blockurl
         EOF
         chmod +x $out/bin/blockurl-server
 
