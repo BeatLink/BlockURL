@@ -20,7 +20,7 @@
             system:
             let
                 pkgs = nixpkgs.legacyPackages.${system};
-                blockurl = pkgs.callPackage ./package.nix { src = ./.; };
+                blockurl = pkgs.callPackage ./package.nix {};
             in
             {
                 # --- Packages --------------------------------------------------------
@@ -72,7 +72,7 @@
                     import ./nixos-module.nix {
                         inherit config lib pkgs;
                         # Pass the package built for the module's host system
-                        blockurlPkg = pkgs.callPackage ./package.nix { src = ./.; };
+                        blockurlPkg = pkgs.callPackage ./package.nix {};
                     };
 
                 nixosModules.default = self.nixosModules.blockurl;
