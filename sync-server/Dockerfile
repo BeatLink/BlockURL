@@ -1,13 +1,12 @@
 FROM python:3.11-slim
 
-RUN pip install --no-cache-dir uwsgi
+RUN pip install --no-cache-dir uwsgi flask
 
 WORKDIR /app
 
-COPY ../requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir .
 
-COPY .. .
+COPY . .
 
 ENV DATABASE_PATH=/app/database/blockurl.db
 ENV BLOCKURL_HOST=0.0.0.0
