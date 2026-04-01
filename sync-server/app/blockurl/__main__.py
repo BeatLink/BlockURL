@@ -3,7 +3,12 @@ from flask import Flask
 from .database import DatabaseManager
 from .views import index_bp, init_settings, init_urls
 
-def create_app(database):
+def create_app():
+    database = DatabaseManager(
+        database_name=os.environ['DATABASE_PATH'], 
+        create_tables=True, 
+        initialize_settings=True
+    )
     app = Flask(__name__)
     app.register_blueprint(index_bp)
     app.register_blueprint(init_settings(database))
@@ -11,13 +16,10 @@ def create_app(database):
     return app
 
 def launch_app():
-    database = DatabaseManager(
-        database_name=os.environ['DATABASE_PATH'], 
-        create_tables=True, 
-        initialize_settings=True
-    )
-    app = create_app(database)
-    app.run(host='0.0.0.0', port=8000, debug=True)
+    app = create_app()
+    host = os.environ.get('BLOCKURL_HOST', '0.0.0.0')
+    port = int(os.environ.get('BLOCKURL_PORT', 8000))
+    app.run(host=host, port=port, debug=True)
 
 if __name__ == '__main__':
     launch_app()
