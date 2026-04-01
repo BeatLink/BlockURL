@@ -8,7 +8,6 @@ let
     pythonEnv = python3.withPackages (
         ps: with ps; [
             flask
-            flask-classful
         ]
     );
 in
