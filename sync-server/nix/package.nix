@@ -2,46 +2,40 @@
     lib,
     python3,
 }:
-
 let
     pythonEnv = python3.withPackages (
         ps: with ps; [
             flask
+            uwsgi
         ]
     );
 in
 pythonEnv.pkgs.buildPythonApplication {
     pname = "blockurl";
     version = "4.0.6";
-
     src = ./.;
-
-    format = "other"; # not a standard setuptools/pyproject package
+    format = "other";
 
     propagatedBuildInputs = [ pythonEnv ];
 
-    # No build step needed — pure Python source
     dontBuild = true;
 
     installPhase = ''
         runHook preInstall
 
-        # Copy the sync-server application into the output
+        # Copy the package into the output
         mkdir -p $out/lib/blockurl
-        cp -r app $out/lib/blockurl/app
+        cp -r blockurl $out/lib/blockurl/blockurl
+        cp uwsgi.ini $out/lib/blockurl/uwsgi.ini
 
         # Write a launcher script
         mkdir -p $out/bin
-        cat > $out/bin/blockurl-server <<EOF
-        #!${pythonEnv}/bin/python3
-        import sys, os
-        sys.path.insert(0, "$out/lib/blockurl")
-        from app.blockurl import app as application
-
-        if __name__ == "__main__":
-            host = os.environ.get("HOST", "0.0.0.0")
-            port = int(os.environ.get("PORT", "8000"))
-            application.run(host=host, port=port)
+        cat > $out/bin/blockurl-server << EOF
+        #!/bin/sh
+        export BLOCKURL_HOST=\''${BLOCKURL_HOST:-0.0.0.0}
+        export BLOCKURL_PORT=\''${BLOCKURL_PORT:-8000}
+        export DATABASE_PATH=\''${DATABASE_PATH:-/var/lib/blockurl/blockurl.db}
+        exec ${pythonEnv}/bin/uwsgi --ini $out/lib/blockurl/uwsgi.ini --chdir $out/lib/blockurl
         EOF
         chmod +x $out/bin/blockurl-server
 
