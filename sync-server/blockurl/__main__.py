@@ -14,7 +14,10 @@ def launch_app():
         create_tables=True, 
         initialize_settings=True
     )
-    app = Flask(__name__)
+    app = Flask(__name__, 
+        template_folder='templates',
+        static_folder='static'
+    )
     app.register_blueprint(index_bp)
     app.register_blueprint(init_settings(database))
     app.register_blueprint(init_urls(database))

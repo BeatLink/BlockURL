@@ -20,3 +20,9 @@ blockurl-server = "blockurl.__main__:launch_app"
 
 [tool.setuptools.packages.find]
 where = ["."]
+
+[tool.setuptools.package-data]
+blockurl = [
+    "templates/**/*",
+    "static/**/*",
+]
