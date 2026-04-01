@@ -8,7 +8,7 @@ from .views import index_bp, init_settings, init_urls
 def launch_app():
     host = os.environ.get('BLOCKURL_HOST', '0.0.0.0')
     port = int(os.environ.get('BLOCKURL_PORT', 8000))
-    database_path = os.environ.get('DATABASE_PATH', "blockurl.db")
+    database_path = os.environ.get('BLOCKURL_DATABASE_PATH', "blockurl.db")
     database = DatabaseManager(
         database_name=database_path, 
         create_tables=True, 

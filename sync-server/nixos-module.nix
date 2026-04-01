@@ -103,9 +103,9 @@ in
             wantedBy = [ "multi-user.target" ];
 
             environment = cfg.extraEnv // {
-                DATABASE_PATH = "${cfg.dataDir}/${cfg.databaseFile}";
-                HOST = cfg.host;
-                PORT = toString cfg.port;
+                BLOCKURL_DATABASE_PATH = "${cfg.dataDir}/${cfg.databaseFile}";
+                BLOCKURL_HOST = cfg.host;
+                BLOCKURL_PORT = toString cfg.port;
             };
 
             serviceConfig = {
