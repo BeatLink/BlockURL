@@ -20,7 +20,7 @@
             system:
             let
                 pkgs = nixpkgs.legacyPackages.${system};
-                blockurl = pkgs.callPackage ./package.nix {};
+                blockurl = pkgs.callPackage ./package.nix { };
             in
             {
                 # --- Packages --------------------------------------------------------
@@ -39,21 +39,7 @@
                 };
 
                 # --- Dev shell -------------------------------------------------------
-                devShells.default = pkgs.mkShell {
-                    packages = [
-                        (pkgs.python3.withPackages (
-                            ps: with ps; [
-                                flask
-                                # mirror the packages listed in package.nix
-                            ]
-                        ))
-                    ];
-                    shellHook = ''
-                        echo "BlockURL dev shell ready."
-                        echo "Start the server with:"
-                        echo "  cd sync-server && DATABASE_PATH=blockurl.db python3 -m app.blockurl"
-                    '';
-                };
+                devShells.default = pkgs.callPackage ./shell.nix { };
             }
         )
 
@@ -72,7 +58,7 @@
                     import ./nixos-module.nix {
                         inherit config lib pkgs;
                         # Pass the package built for the module's host system
-                        blockurlPkg = pkgs.callPackage ./package.nix {};
+                        blockurlPkg = pkgs.callPackage ./package.nix { };
                     };
 
                 nixosModules.default = self.nixosModules.blockurl;
