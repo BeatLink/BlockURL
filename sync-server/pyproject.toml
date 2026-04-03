@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "blockurl"
-version = "4.0.6"
-description = "BlockURL uWSGI application"
+version = "4.1.3"
+description = "BlockURL Self Hosted Server (uvicorn)"
 readme = "../README.md"
 requires-python = ">=3.8"
 
