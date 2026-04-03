@@ -24,7 +24,8 @@ function openSettingsPage() {
 
 // Toggle Blocking For Page ===========================================================================================
 async function toggleBlockedState(page) {
-    var url = removeTrailingSlashes(page.url)
+    var url = page.url
+    url = url.endsWith('/') ? url.slice(0, -1) : url
     var response = await queryURLs([url])
     if (response[url]) {
         console.log("Removing from Blocklist: " + url)
