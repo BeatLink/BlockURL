@@ -2,6 +2,35 @@
 
 [![Publish Docker image](https://github.com/BeatLink/BlockURL/actions/workflows/build-and-push-docker-image.yml/badge.svg)](https://github.com/BeatLink/BlockURL/actions/workflows/build-and-push-docker-image.yml)
 
+## Table of Contents
+- [BlockURL](#blockurl)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Rationale](#rationale)
+  - [Features](#features)
+  - [Firefox Addon](#firefox-addon)
+    - [Addon Installation](#addon-installation)
+    - [Addon Development](#addon-development)
+      - [Publishing to Firefox Addon Store](#publishing-to-firefox-addon-store)
+  - [Sync Server](#sync-server)
+    - [Installation](#installation)
+      - [Docker](#docker)
+        - [Docker Run](#docker-run)
+        - [Docker Compose](#docker-compose)
+        - [Notes](#notes)
+      - [Nix](#nix)
+        - [NixOS Module](#nixos-module)
+        - [Configuration Options](#configuration-options)
+    - [Development](#development)
+      - [Python venv Setup](#python-venv-setup)
+      - [Nix Development Environment](#nix-development-environment)
+      - [Publishing](#publishing)
+        - [Publishing to DockerHub](#publishing-to-dockerhub)
+  - [AI Use Policy](#ai-use-policy)
+
+
+## Overview
+
 BlockURL is a Firefox extension to block a specific URL or link. Unlike other blockers, it doesn't work on a domain or subdomain but on a specific URL. This is mainly useful for blocking visited articles, videos, pages and other content.
 
 BlockURL uses a self hosted Python Flask server in order to store all of the URLs that are blocked as well as the text for the blocked page. This enables an unlimited number of URLs to be stored, with the only limitations being SQLite and the filesystem. The sync server is hosted on DockerHub.
@@ -24,13 +53,43 @@ This is particularly useful on content-heavy platforms where the same videos, ar
 * **Unlimited block list** — store as many URLs as you need, with no artificial limits beyond your own storage.
 * **Self hosted sync server** — all data lives on a server you own and control, with no third party involvement and no data sharing.
 
-## Usage
+--- 
+
+## Firefox Addon
+
+### Addon Installation
+
+Install the addon from [https://addons.mozilla.org/en-US/firefox/addon/blockurl/](https://addons.mozilla.org/en-US/firefox/addon/blockurl/)
+
+### Addon Development
+
+1. Clone the repository
+2. Load the addon as a temporary addon in [about:debugging](about:debugging) by selecting the `manifest.json` file in the firefox-addon folder.
+3. Edit the code as needed. Be sure to reload the addon from [about:debugging](about:debugging).
+
+
+#### Publishing to Firefox Addon Store
+
+1. Run the following:
+
+```bash
+cd firefox-addon
+zip -r -FS ../blockurl.zip * --exclude '*.git*'
+```
+
+2. Go to [https://addons.mozilla.org/en-US/developers/addon/blockurl/versions/submit/](https://addons.mozilla.org/en-US/developers/addon/blockurl/versions/submit/)
+
+---
+
+## Sync Server
+
+### Installation
 
 First you will need to install the sync server via DockerHub. Once installed, install the addon and go to settings, then set the sync server URL.
 
-### Sync Server Installation
+#### Docker
 
-#### Docker Run
+##### Docker Run
 
 ```bash
 docker run -d \
@@ -41,7 +100,7 @@ docker run -d \
   beatlink/blockurl:latest
 ```
 
-#### Docker Compose
+##### Docker Compose
 
 Create a `docker-compose.yml` file with the following content:
 
@@ -66,7 +125,7 @@ Then start the server:
 docker compose up -d
 ```
 
-#### Notes
+##### Notes
 
 - **Persistence** — the `blockurl_data` volume keeps your database intact across restarts and updates. Without it, your blocked URL list will be lost when the container is recreated.
 - **Port** — change the left-hand value of `-p 8000:8000` to use a different host port, e.g. `-p 9000:8000`.
@@ -76,52 +135,9 @@ docker compose up -d
   docker compose pull && docker compose up -d
 ```
 
-## Development
+#### Nix
 
-### Development Sync Server Setup
-
-1. Run the following commands:
-
-```bash
-cd sync-server
-python3 -m venv venv
-source venv/bin/activate
-pip install --no-cache-dir -e .
-DATABASE_PATH=blockurl.db blockurl-server
-```
-
-The development sync server should now be accessible at [http://localhost:8000](http://localhost:8000).
-
-### Loading the Addon
-
-1. Load the addon as a temporary addon in `about:debugging`.
-2. Edit the code as needed. Be sure to reload the addon from `about:debugging`.
-
-### Publishing
-
-#### Publishing to DockerHub
-
-Publishing is handled by GitHub Actions.
-
-1. Create a release explaining the changes.
-2. GitHub Actions will build and push the sync server image automatically.
-
-#### Publishing to Firefox Addon Store
-
-1. Run the following:
-
-```bash
-cd firefox-addon
-zip -r -FS ../blockurl.zip * --exclude '*.git*'
-```
-
-2. Go to [https://addons.mozilla.org/en-US/developers/addon/blockurl/versions/submit/](https://addons.mozilla.org/en-US/developers/addon/blockurl/versions/submit/)
-
-
-
-### NixOS / Nix Installation
-
-#### NixOS Module
+##### NixOS Module
 
 Add BlockURL to your NixOS configuration by including the flake as an input and enabling the module:
 
@@ -157,7 +173,7 @@ bash
 sudo nixos-rebuild switch
 ```
 
-#### Configuration Options
+##### Configuration Options
 
 All options are set under `services.blockurl` in your NixOS configuration:
 
@@ -175,9 +191,24 @@ services.blockurl = {
 };
 ```
 
----
+### Development
 
-### Nix Development Environment
+#### Python venv Setup
+
+1. Run the following commands:
+
+```bash
+cd sync-server
+python3 -m venv venv
+source venv/bin/activate
+pip install --no-cache-dir -e .
+DATABASE_PATH=blockurl.db blockurl-server
+```
+
+The development sync server should now be accessible at [http://localhost:8000](http://localhost:8000).
+
+
+#### Nix Development Environment
 
 A dev shell is included with all dependencies preconfigured. To enter it:
 
@@ -204,6 +235,17 @@ nix build
 ```
 
 The built binary will be available at `./result/bin/blockurl-server`.
+
+#### Publishing
+
+##### Publishing to DockerHub
+
+Publishing is handled by GitHub Actions.
+
+1. Create a release explaining the changes.
+2. GitHub Actions will build and push the sync server image automatically.
+
+---
 
 ## AI Use Policy
 
