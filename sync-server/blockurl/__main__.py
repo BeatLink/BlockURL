@@ -2,7 +2,8 @@ import os
 import uvicorn
 from asgiref.wsgi import WsgiToAsgi
 from flask import Flask
-from .database import DatabaseManager
+# Assuming db is your Peewee SqliteExtDatabase instance imported from your database module
+from .database import DatabaseManager, db 
 from .views import index_bp, init_settings, init_urls
 
 def launch_app():
@@ -14,13 +15,25 @@ def launch_app():
         create_tables=True, 
         initialize_settings=True
     )
+    database.close()
+
     app = Flask(__name__, 
         template_folder='templates',
         static_folder='static'
     )
+    @app.before_request
+    def before_request():
+        db.connect(reuse_if_open=True)
+
+    @app.teardown_request
+    def teardown_request(exception=None):
+        if not db.is_closed():
+            db.close()
+
     app.register_blueprint(index_bp)
     app.register_blueprint(init_settings(database))
     app.register_blueprint(init_urls(database))
+    
     asgi_app = WsgiToAsgi(app)
     uvicorn.run(asgi_app, host=host, port=port)
 
