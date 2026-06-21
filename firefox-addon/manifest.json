@@ -22,13 +22,10 @@
         "48": "no.png"
     },
     "permissions": [
-        "webRequest",
-        "webRequestBlocking",
         "storage",
         "tabs",
         "activeTab",
         "menus",
-        "alarms",
         "<all_urls>"
     ],
     "background": {

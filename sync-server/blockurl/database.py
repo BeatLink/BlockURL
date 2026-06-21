@@ -17,7 +17,7 @@ class BaseModel(Model):
 class URL(BaseModel):
     url = CharField(primary_key=True)
     domain = CharField(null=True, index=True)
-    created_at = DateTimeField(default=lambda: datetime.datetime.now(), index=True)
+    created_at = DateTimeField(default=lambda: datetime.datetime.utcnow(), index=True)
 
 
 class Setting(BaseModel):
@@ -84,7 +84,9 @@ class DatabaseManager:
         # Backfill created_at for any rows missing it. This is the best
         # available approximation for pre-existing rows, not a true
         # historical value, since SQLite never recorded it before.
-        URL.update(created_at=datetime.datetime.now()).where(
+        # Stored as UTC to match the default on the field and how the
+        # frontend interprets these timestamps.
+        URL.update(created_at=datetime.datetime.utcnow()).where(
             URL.created_at.is_null()
         ).execute()
 

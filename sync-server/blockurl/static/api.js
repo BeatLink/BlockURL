@@ -7,9 +7,13 @@ export function removeTrailingSlashes(urls) {
 }
 
 async function sendRequest(method, endpoint, payload = null) {
-    let requests = {
-        "GET": new Request(`/${endpoint}`),
-        "POST": new Request(
+    // Only build the Request object we actually need, instead of constructing
+    // both a GET and a POST request on every call and discarding one.
+    let request
+    if (method === "GET") {
+        request = new Request(`/${endpoint}`)
+    } else {
+        request = new Request(
             `/${endpoint}`,
             {
                 method: "POST",
@@ -18,7 +22,7 @@ async function sendRequest(method, endpoint, payload = null) {
             }
         )
     }
-    return (await fetch(requests[method])).json()
+    return (await fetch(request)).json()
 }
 
 // Settings Functions =================================================================================================
@@ -30,7 +34,7 @@ export async function saveSetting(key, value) {
     return await sendRequest("POST", "settings/set", { "key": key, "value": value })
 }
 
-// URL Functions ======================================================================================================
+// URL Functions =======================================================================================================
 export async function getAllURLs() {
     return await sendRequest("GET", "urls/all")
 }

@@ -4,6 +4,7 @@
     If the page shouldn't be blocked, instead it checks to see if links within the page should be blocked
 */
 "use strict"
+
 async function blockURLContentScript() {
     // Unblock ============================================================================================================
     function unblock() {
@@ -39,9 +40,15 @@ async function blockURLContentScript() {
         }
     }
     // Block Links on page ================================================================================================
+    // Track elements we've already inspected and URLs we've already resolved
+    // so that repeated DOM mutations don't trigger a full re-scan and
+    // re-query of every link/image on the page every single time - only
+    // genuinely new elements/URLs are sent to the sync server.
+    const processedElements = new WeakSet()
+    const urlBlockStatusCache = new Map() // url -> boolean (blocked?)
+
     async function blockLinks() {
         console.log("Blocking matching links on current page")
-        // Find all blocked links and block them
         var urlMap = new Object()
         var types = {
             "a": "href",
@@ -50,8 +57,25 @@ async function blockURLContentScript() {
         for (var type in types) {
             var elements = [...document.querySelectorAll(type)]
             elements.forEach((element, _) => {
+                if (processedElements.has(element)) {
+                    return
+                }
                 let url = element[types[type]]
+                if (!url) {
+                    return
+                }
                 url = url.endsWith('/') ? url.slice(0, -1) : url
+
+                // Already know the answer for this URL from an earlier scan -
+                // apply it immediately without going back to the server.
+                if (urlBlockStatusCache.has(url)) {
+                    if (urlBlockStatusCache.get(url)) {
+                        element.style.setProperty('display', 'none', 'important')
+                    }
+                    processedElements.add(element)
+                    return
+                }
+
                 if (url in urlMap) {
                     urlMap[url].push(element)
                 } else {
@@ -61,11 +85,18 @@ async function blockURLContentScript() {
             })
         }
         var urls = Object.keys(urlMap)
+        if (urls.length === 0) {
+            // Nothing new to check - skip the round trip entirely.
+            return
+        }
         var response = await browser.runtime.sendMessage({ queryURLs: urls })
         for (var url in response) {
-            if (response[url]) {
-                for (var element of urlMap[url])
+            urlBlockStatusCache.set(url, response[url])
+            for (var element of urlMap[url]) {
+                processedElements.add(element)
+                if (response[url]) {
                     element.style.setProperty('display', 'none', 'important')
+                }
             }
         }
     }

@@ -17,9 +17,13 @@ async function sendRequest(method, endpoint, payload = null) {
 
     syncServerURL = syncServerURL.endsWith('/') ? syncServerURL.slice(0, -1) : syncServerURL
 
-    let requests = {
-        "GET": new Request(`${syncServerURL}/${endpoint}`, { mode: 'cors' }),
-        "POST": new Request(
+    // Only build the Request object we actually need, instead of constructing
+    // both a GET and a POST request on every call and discarding one.
+    let request
+    if (method === "GET") {
+        request = new Request(`${syncServerURL}/${endpoint}`, { mode: 'cors' })
+    } else {
+        request = new Request(
             `${syncServerURL}/${endpoint}`,
             {
                 method: "POST",
@@ -31,7 +35,7 @@ async function sendRequest(method, endpoint, payload = null) {
     }
 
     try {
-        const response = await fetch(requests[method])
+        const response = await fetch(request)
         if (!response.ok) {
             console.error(`BlockURL: sync server returned ${response.status} for ${endpoint}`)
             throw new Error(`Sync server error: ${response.status}`)
@@ -48,7 +52,7 @@ export async function getSetting(key) {
     return await sendRequest("POST", "settings/get", { "key": key })
 }
 
-// URL Functions ======================================================================================================
+// URL Functions =======================================================================================================
 export async function getAllURLs() {
     return await sendRequest("GET", "urls/all", null)
 }
