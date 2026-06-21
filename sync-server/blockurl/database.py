@@ -3,13 +3,11 @@ from urllib.parse import urlparse
 from peewee import *
 from playhouse.sqlite_ext import SqliteExtDatabase
 
-# 1. Database Configuration -------------------------------------------------------------------------------------------
-db = SqliteExtDatabase("blockurl.db", pragmas={
-    "journal_mode": "wal",
-    "busy_timeout": 2000,
-})
+# 1. Initialize an un-deferred database proxy
+db = SqliteExtDatabase(None)  # Path is intentionally set to None initially
 
-# 2. Declarative Models ------------------------------------------------------------------------------------------------
+
+# 2. Declarative Models (Bound to the Proxy Database)
 class BaseModel(Model):
     class Meta:
         database = db
@@ -26,10 +24,15 @@ class Setting(BaseModel):
     value = CharField()
 
 
-# 3. Clean Object-Oriented Manager -------------------------------------------------------------------------------------
+# 3. Dynamic Database Manager 
 class DatabaseManager:
-    def __init__(self, create_tables=False, initialize_settings=False):
-        # reuse_if_open avoids throwing errors if connections are requested concurrently
+    def __init__(self, database_name="blockurl.db", create_tables=False, initialize_settings=False):
+        # Dynamically attach the chosen database name and custom optimization PRAGMAs
+        db.init(database_name, pragmas={
+            "journal_mode": "wal",
+            "busy_timeout": 2000,
+        })
+        
         db.connect(reuse_if_open=True)
         
         if create_tables:
@@ -114,7 +117,6 @@ class DatabaseManager:
 
         order_attr = column_map[order_by].desc() if descending else column_map[order_by].asc()
         query = query.order_by(order_attr)
-        
         return [(u.url, u.domain, str(u.created_at)) for u in query]
 
     def get_domains_with_counts(self):
