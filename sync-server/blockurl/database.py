@@ -105,24 +105,19 @@ class DatabaseManager:
             else:
                 cursor.execute(query, params or [])
 
-    def _fetch_all(self, query, params=None):
+    def _fetch(self, query, params=None, fetch_all=True):
+        """Executes a retrieval query and returns either a list of rows or a single row."""
         with self.connection() as database:
             cursor = database.cursor()
             cursor.execute(query, params or [])
-            return cursor.fetchall()
-
-    def _fetch_one(self, query, params=None):
-        with self.connection() as database:
-            cursor = database.cursor()
-            cursor.execute(query, params or [])
-            return cursor.fetchone()
+            return cursor.fetchall() if fetch_all else cursor.fetchone()
 
     def create_all_tables(self):
         self._execute(Queries.CREATE_URLS_TABLE)
         self._execute(Queries.CREATE_SETTINGS_TABLE)
 
     def migrate_add_columns(self):
-        existing_columns = [row["name"] for row in self._fetch_all(Queries.TABLE_INFO)]
+        existing_columns = [row["name"] for row in self._fetch(Queries.TABLE_INFO)]
 
         if "domain" not in existing_columns:
             self._execute(Queries.ADD_DOMAIN_COLUMN)
@@ -131,7 +126,7 @@ class DatabaseManager:
             self._execute(Queries.ADD_CREATED_AT_COLUMN)
             self._execute(Queries.BACKFILL_NULL_CREATED_AT)
 
-        rows_needing_domain = [row["url"] for row in self._fetch_all(Queries.GET_UNMAPPED_DOMAINS)]
+        rows_needing_domain = [row["url"] for row in self._fetch(Queries.GET_UNMAPPED_DOMAINS)]
         if rows_needing_domain:
             updates = [(self._extract_domain(url), url) for url in rows_needing_domain]
             self._execute(Queries.UPDATE_DOMAIN_FOR_URL, updates, many=True)
@@ -142,7 +137,8 @@ class DatabaseManager:
         self._repair_created_at_default()
 
     def _repair_created_at_default(self):
-        table_sql = self._fetch_one(Queries.GET_TABLE_SQL)["sql"]
+        table_row = self._fetch(Queries.GET_TABLE_SQL, fetch_all=False)
+        table_sql = table_row["sql"] if table_row else ""
 
         if "DEFAULT (datetime('now'))" in table_sql or "DEFAULT (datetime(\"now\"))" in table_sql:
             return  
@@ -173,11 +169,11 @@ class DatabaseManager:
         return True
 
     def get_setting(self, key):
-        row = self._fetch_one(Queries.SELECT_SETTING, [key])
+        row = self._fetch(Queries.SELECT_SETTING, [key], fetch_all=False)
         return row["value"] if row else None
 
     def get_all_settings(self):
-        return [(row["key"], row["value"]) for row in self._fetch_all(Queries.SELECT_ALL_SETTINGS)]
+        return [(row["key"], row["value"]) for row in self._fetch(Queries.SELECT_ALL_SETTINGS)]
 
     # URL Methods ------------------------------------------------------------------------------------------------------
     @staticmethod
@@ -197,7 +193,6 @@ class DatabaseManager:
     def delete_urls(self, urls):
         if not urls:
             return True
-        # Dynamic IN filters are kept simple and safe using parameterized list generation
         statement = f"DELETE FROM urls WHERE url IN ({','.join(['?'] * len(urls))})"
         self._execute(statement, tuple(urls))
         return True
@@ -206,11 +201,11 @@ class DatabaseManager:
         if not urls:
             return {}
         statement = f"SELECT url FROM urls WHERE url IN ({','.join(['?'] * len(urls))})"
-        database_matches = {row["url"] for row in self._fetch_all(statement, tuple(urls))}
+        database_matches = {row["url"] for row in self._fetch(statement, tuple(urls))}
         return {url: url in database_matches for url in urls}
 
     def get_all_urls(self):
-        return [row["url"] for row in self._fetch_all(Queries.SELECT_ALL_URLS)]
+        return [row["url"] for row in self._fetch(Queries.SELECT_ALL_URLS)]
 
     def get_urls_sorted(self, order_by="created_at", descending=True, domain=None):
         if order_by not in ("created_at", "domain", "url"):
@@ -223,7 +218,7 @@ class DatabaseManager:
             params.append(domain)
             
         query += f" ORDER BY {order_by} {'DESC' if descending else 'ASC'}"
-        return [(row["url"], row["domain"], row["created_at"]) for row in self._fetch_all(query, params)]
+        return [(row["url"], row["domain"], row["created_at"]) for row in self._fetch(query, params)]
 
     def get_domains_with_counts(self):
-        return [(row["domain"], row["count"]) for row in self._fetch_all(Queries.SELECT_DOMAINS_WITH_COUNTS)]
+        return [(row["domain"], row["count"]) for row in self._fetch(Queries.SELECT_DOMAINS_WITH_COUNTS)]
