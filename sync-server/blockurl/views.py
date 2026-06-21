@@ -11,10 +11,9 @@ def index():
 
 
 # Settings -------------------------------------------------------------------------------------------------------------
-settings_bp = Blueprint('settings', __name__, url_prefix='/settings')
-
-
 def init_settings(database):
+    settings_bp = Blueprint('settings', __name__, url_prefix='/settings')
+
     @settings_bp.route('/all', methods=["GET"])
     def all():
         return jsonify(database.get_all_settings())
@@ -33,11 +32,11 @@ def init_settings(database):
     return settings_bp
 
 
-# URLs -----------------------------------------------------------------------------------------------------------------
-urls_bp = Blueprint('urls', __name__, url_prefix='/urls')
-
-
+# URLs -------------------------------------------------------------------------------------------------------------------
 def init_urls(database):
+    # Same reasoning as init_settings above: build a new Blueprint each call.
+    urls_bp = Blueprint('urls', __name__, url_prefix='/urls')
+
     @urls_bp.route('/all', methods=["GET"])
     def all():
         all_urls = database.get_all_urls()
