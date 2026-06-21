@@ -28,8 +28,6 @@ class DatabaseManager:
         ]
         for statement in create_table_statements:
             cursor.execute(statement)
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_urls_domain ON urls(domain)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_urls_created_at ON urls(created_at)")
         database.commit()
 
     def migrate_add_columns(self):
