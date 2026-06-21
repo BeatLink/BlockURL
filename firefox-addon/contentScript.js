@@ -17,6 +17,13 @@ async function blockURLContentScript() {
         const html = await (await fetch(browser.runtime.getURL("blocked.html"))).text()
         const parser = new DOMParser()
         const newDoc = parser.parseFromString(html, "text/html")
+        // Rewrite relative stylesheet hrefs to extension-resource URLs.
+        // Without this, the link would resolve against the current page's
+        // origin (since we're injecting into the real page's document) and
+        // silently fail to load.
+        newDoc.head.querySelectorAll('link[rel="stylesheet"]').forEach((link) => {
+            link.href = browser.runtime.getURL(link.getAttribute('href'))
+        })
         document.head.replaceChildren(...newDoc.head.childNodes)
         document.body.replaceChildren(...newDoc.body.childNodes)
         var button = document.getElementById("button")
