@@ -1,0 +1,57 @@
+# Builds and submits the Firefox addon to addons.mozilla.org whenever a
+# GitHub release is published. Requires the following repository secrets:
+#   AMO_JWT_ISSUER  - API key from https://addons.mozilla.org/developers/addon/api/key/
+#   AMO_JWT_SECRET  - API secret from the same page
+name: Publish Firefox Addon
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
+  publish:
+    name: Sign & submit to AMO
+    needs: test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: firefox-addon
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: firefox-addon/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Lint extension
+        run: npx web-ext lint --source-dir=.
+
+      - name: Build extension package
+        run: npx web-ext build --source-dir=. --artifacts-dir=web-ext-artifacts --overwrite-dest
+
+      - name: Sign and submit to addons.mozilla.org
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
+          WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: |
+          npx web-ext sign \
+            --source-dir=. \
+            --artifacts-dir=web-ext-artifacts \
+            --channel=listed \
+            --api-key="$WEB_EXT_API_KEY" \
+            --api-secret="$WEB_EXT_API_SECRET"
+
+      - name: Upload signed package as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: blockurl-signed-xpi
+          path: firefox-addon/web-ext-artifacts/*.xpi

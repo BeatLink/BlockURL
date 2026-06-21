@@ -1,0 +1,54 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  sync-server-tests:
+    name: Sync Server (pytest)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        working-directory: sync-server
+        run: pip install -e ".[test]"
+
+      - name: Run tests
+        working-directory: sync-server
+        run: pytest --cov=blockurl --cov-report=term-missing
+
+  firefox-addon-tests:
+    name: Firefox Addon (vitest + web-ext lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: firefox-addon/package-lock.json
+
+      - name: Install dependencies
+        working-directory: firefox-addon
+        run: npm install
+
+      - name: Run unit tests
+        working-directory: firefox-addon
+        run: npm test
+
+      - name: Lint extension
+        working-directory: firefox-addon
+        run: npx web-ext lint --source-dir=.

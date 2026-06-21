@@ -13,6 +13,13 @@ dependencies = [
     "flask",
     "uvicorn",
     "asgiref",
+    "peewee",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
 ]
 
 [project.scripts]
@@ -26,3 +33,6 @@ blockurl = [
     "templates/**/*",
     "static/**/*",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
