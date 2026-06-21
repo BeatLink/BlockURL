@@ -46,54 +46,67 @@ class DatabaseManager:
             self._connection.close()
             self._connection = None
 
-    def create_all_tables(self):
+    def _execute(self, query, params=None, many=False):
+        """Executes a non-fetching query inside a managed connection."""
         with self.connection() as database:
             cursor = database.cursor()
-            create_table_statements = [
-                """CREATE TABLE IF NOT EXISTS urls (
-                    url TEXT PRIMARY KEY,
-                    domain TEXT,
-                    created_at TEXT DEFAULT (datetime('now'))
-                )""",
-                """CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)"""
-            ]
-            for statement in create_table_statements:
-                cursor.execute(statement)
+            if many:
+                cursor.executemany(query, params or [])
+            else:
+                cursor.execute(query, params or [])
+
+    def _fetch_all(self, query, params=None):
+        """Executes a query and returns all result rows."""
+        with self.connection() as database:
+            cursor = database.cursor()
+            cursor.execute(query, params or [])
+            return cursor.fetchall()
+
+    def _fetch_one(self, query, params=None):
+        """Executes a query and returns a single result row (or None)."""
+        with self.connection() as database:
+            cursor = database.cursor()
+            cursor.execute(query, params or [])
+            return cursor.fetchone()
+
+    def create_all_tables(self):
+        create_table_statements = [
+            """CREATE TABLE IF NOT EXISTS urls (
+                url TEXT PRIMARY KEY,
+                domain TEXT,
+                created_at TEXT DEFAULT (datetime('now'))
+            )""",
+            """CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)"""
+        ]
+        for statement in create_table_statements:
+            self._execute(statement)
 
     def migrate_add_columns(self):
         """
         One-time migration for databases created before domain/created_at
         existed. Safe to call every startup; it's a no-op once columns exist.
         """
-        with self.connection() as database:
-            cursor = database.cursor()
-            cursor.execute("PRAGMA table_info(urls)")
-            existing_columns = [row[1] for row in cursor.fetchall()]
+        existing_columns = [row[1] for row in self._fetch_all("PRAGMA table_info(urls)")]
 
-            if "domain" not in existing_columns:
-                cursor.execute("ALTER TABLE urls ADD COLUMN domain TEXT")
+        if "domain" not in existing_columns:
+            self._execute("ALTER TABLE urls ADD COLUMN domain TEXT")
 
-            if "created_at" not in existing_columns:
-                cursor.execute("ALTER TABLE urls ADD COLUMN created_at TEXT DEFAULT (datetime('now'))")
-                # Existing rows have no real creation date on record. Stamping
-                # "now" is the best available approximation, not a true value.
-                cursor.execute("UPDATE urls SET created_at = datetime('now') WHERE created_at IS NULL")
+        if "created_at" not in existing_columns:
+            self._execute("ALTER TABLE urls ADD COLUMN created_at TEXT DEFAULT (datetime('now'))")
+            # Existing rows have no real creation date on record. Stamping
+            # "now" is the best available approximation, not a true value.
+            self._execute("UPDATE urls SET created_at = datetime('now') WHERE created_at IS NULL")
 
         # Backfill domain for any rows that don't have one yet (e.g. rows
         # that existed before the domain column, or were inserted oddly).
-        with self.connection() as database:
-            cursor = database.cursor()
-            cursor.execute("SELECT url FROM urls WHERE domain IS NULL OR domain = ''")
-            rows_needing_domain = [row[0] for row in cursor.fetchall()]
-            if rows_needing_domain:
-                update_statement = "UPDATE urls SET domain = ? WHERE url = ?"
-                updates = [(self._extract_domain(url), url) for url in rows_needing_domain]
-                cursor.executemany(update_statement, updates)
+        rows_needing_domain = [row[0] for row in self._fetch_all("SELECT url FROM urls WHERE domain IS NULL OR domain = ''")]
+        if rows_needing_domain:
+            update_statement = "UPDATE urls SET domain = ? WHERE url = ?"
+            updates = [(self._extract_domain(url), url) for url in rows_needing_domain]
+            self._execute(update_statement, updates, many=True)
 
-        with self.connection() as database:
-            cursor = database.cursor()
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_urls_domain ON urls(domain)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_urls_created_at ON urls(created_at)")
+        self._execute("CREATE INDEX IF NOT EXISTS idx_urls_domain ON urls(domain)")
+        self._execute("CREATE INDEX IF NOT EXISTS idx_urls_created_at ON urls(created_at)")
 
         self._repair_created_at_default()
 
@@ -105,29 +118,26 @@ class DatabaseManager:
         Safe and cheap to call every startup: it's a no-op once the default
         is correctly attached.
         """
-        with self.connection() as database:
-            cursor = database.cursor()
-            cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='urls'")
-            table_sql = cursor.fetchone()[0]
+        table_sql = self._fetch_one("SELECT sql FROM sqlite_master WHERE type='table' AND name='urls'")[0]
 
-            if "DEFAULT (datetime('now'))" in table_sql or "DEFAULT (datetime(\"now\"))" in table_sql:
-                return  # default already attached correctly, nothing to do
+        if "DEFAULT (datetime('now'))" in table_sql or "DEFAULT (datetime(\"now\"))" in table_sql:
+            return  # default already attached correctly, nothing to do
 
-            cursor.execute("ALTER TABLE urls RENAME TO urls_old")
-            cursor.execute("""
-                CREATE TABLE urls (
-                    url TEXT PRIMARY KEY,
-                    domain TEXT,
-                    created_at TEXT DEFAULT (datetime('now'))
-                )
-            """)
-            cursor.execute("""
-                INSERT INTO urls (url, domain, created_at)
-                SELECT url, domain, COALESCE(created_at, datetime('now')) FROM urls_old
-            """)
-            cursor.execute("DROP TABLE urls_old")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_urls_domain ON urls(domain)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_urls_created_at ON urls(created_at)")
+        self._execute("ALTER TABLE urls RENAME TO urls_old")
+        self._execute("""
+            CREATE TABLE urls (
+                url TEXT PRIMARY KEY,
+                domain TEXT,
+                created_at TEXT DEFAULT (datetime('now'))
+            )
+        """)
+        self._execute("""
+            INSERT INTO urls (url, domain, created_at)
+            SELECT url, domain, COALESCE(created_at, datetime('now')) FROM urls_old
+        """)
+        self._execute("DROP TABLE urls_old")
+        self._execute("CREATE INDEX IF NOT EXISTS idx_urls_domain ON urls(domain)")
+        self._execute("CREATE INDEX IF NOT EXISTS idx_urls_created_at ON urls(created_at)")
 
     # Settings Methods -------------------------------------------------------------------------------------------------
     def init_settings(self):
@@ -136,41 +146,24 @@ class DatabaseManager:
         self.create_setting("blocked_page_button_text", "Unblock")
 
     def create_setting(self, key, value):
-        with self.connection() as database:
-            cursor = database.cursor()
-            statement = "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)"
-            cursor.execute(statement, [key, value])
+        self._execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", [key, value])
         return True
 
     def set_setting(self, key, value):
-        with self.connection() as database:
-            cursor = database.cursor()
-            statement = "UPDATE settings SET key = ?, value = ? WHERE key = ?"
-            cursor.execute(statement, [key, value, key])
+        self._execute("UPDATE settings SET key = ?, value = ? WHERE key = ?", [key, value, key])
         return True
 
     def delete_setting(self, key):
-        with self.connection() as database:
-            cursor = database.cursor()
-            statement = "DELETE FROM settings WHERE key = ?"
-            cursor.execute(statement, [key])
+        self._execute("DELETE FROM settings WHERE key = ?", [key])
         return True
 
     def get_setting(self, key):
-        with self.connection() as database:
-            cursor = database.cursor()
-            statement = "SELECT value FROM settings WHERE key = ?"
-            cursor.execute(statement, [key])
-            data = cursor.fetchone()
-            if data:
-                return data[0]
+        data = self._fetch_one("SELECT value FROM settings WHERE key = ?", [key])
+        if data:
+            return data[0]
 
     def get_all_settings(self):
-        with self.connection() as database:
-            cursor = database.cursor()
-            query = "SELECT key, value FROM settings"
-            cursor.execute(query)
-            return cursor.fetchall()
+        return self._fetch_all("SELECT key, value FROM settings")
 
     # URL Methods ------------------------------------------------------------------------------------------------------
     @staticmethod
@@ -187,40 +180,28 @@ class DatabaseManager:
         for URLs that already exist, refresh their domain while leaving
         the original created_at untouched.
         """
-        with self.connection() as database:
-            cursor = database.cursor()
-            rows = [(url, self._extract_domain(url)) for url in urls]
-            statement = """
-                INSERT INTO urls (url, domain)
-                VALUES (?, ?)
-                ON CONFLICT(url) DO UPDATE SET domain = excluded.domain
-            """
-            cursor.executemany(statement, rows)
+        rows = [(url, self._extract_domain(url)) for url in urls]
+        statement = """
+            INSERT INTO urls (url, domain)
+            VALUES (?, ?)
+            ON CONFLICT(url) DO UPDATE SET domain = excluded.domain
+        """
+        self._execute(statement, rows, many=True)
         return True
 
     def delete_urls(self, urls):
-        with self.connection() as database:
-            cursor = database.cursor()
-            statement = f"DELETE FROM urls WHERE url IN ({','.join(['?'] * len(urls))})"
-            cursor.execute(statement, tuple(urls))
+        statement = f"DELETE FROM urls WHERE url IN ({','.join(['?'] * len(urls))})"
+        self._execute(statement, tuple(urls))
         return True
 
     def get_urls_exist(self, urls):
-        with self.connection() as database:
-            cursor = database.cursor()
-            statement = f"SELECT url FROM urls WHERE url IN ({','.join(['?'] * len(urls))})"
-            cursor.execute(statement, tuple(urls))
-            database_matches = cursor.fetchall()
-            database_matches = [url[0] for url in database_matches]
-            results = {url: url in database_matches for url in urls}
-            return results
+        statement = f"SELECT url FROM urls WHERE url IN ({','.join(['?'] * len(urls))})"
+        database_matches = [row[0] for row in self._fetch_all(statement, tuple(urls))]
+        results = {url: url in database_matches for url in urls}
+        return results
 
     def get_all_urls(self):
-        with self.connection() as database:
-            cursor = database.cursor()
-            query = "SELECT url FROM urls"
-            cursor.execute(query)
-            return [url[0] for url in cursor.fetchall()]
+        return [url[0] for url in self._fetch_all("SELECT url FROM urls")]
 
     def get_urls_sorted(self, order_by="created_at", descending=True, domain=None):
         """
@@ -231,26 +212,20 @@ class DatabaseManager:
         if order_by not in ("created_at", "domain", "url"):
             raise ValueError(f"Invalid order_by column: {order_by}")
 
-        with self.connection() as database:
-            cursor = database.cursor()
-            query = "SELECT url, domain, created_at FROM urls"
-            params = []
-            if domain:
-                query += " WHERE domain = ?"
-                params.append(domain)
-            query += f" ORDER BY {order_by} {'DESC' if descending else 'ASC'}"
-            cursor.execute(query, params)
-            return cursor.fetchall()
+        query = "SELECT url, domain, created_at FROM urls"
+        params = []
+        if domain:
+            query += " WHERE domain = ?"
+            params.append(domain)
+        query += f" ORDER BY {order_by} {'DESC' if descending else 'ASC'}"
+        return self._fetch_all(query, params)
 
     def get_domains_with_counts(self):
         """Returns list of (domain, count) tuples, most-blocked first."""
-        with self.connection() as database:
-            cursor = database.cursor()
-            query = """
-                SELECT domain, COUNT(*) as count
-                FROM urls
-                GROUP BY domain
-                ORDER BY count DESC
-            """
-            cursor.execute(query)
-            return cursor.fetchall()
+        query = """
+            SELECT domain, COUNT(*) as count
+            FROM urls
+            GROUP BY domain
+            ORDER BY count DESC
+        """
+        return self._fetch_all(query)
