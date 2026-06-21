@@ -1,5 +1,4 @@
 "use strict"
-
 import { queryURLs, blockURLs, unblockURLs, getSetting, removeTrailingSlashes } from "/api.js"
 
 var contextMenu = {
@@ -8,10 +7,15 @@ var contextMenu = {
     contexts: ["link"],
 }
 
+// Normalize a single URL the same way removeTrailingSlashes does for arrays ------------------------------------------
+function normalizeURL(url) {
+    return url.endsWith('/') ? url.slice(0, -1) : url
+}
+
 // Initialize Plugin Storage ==========================================================================================
 async function initialize() {
     var settings = await browser.storage.sync.get("syncServerURL")
-    if (!settings | !settings['syncServerURL']) {
+    if (!settings || !settings['syncServerURL']) {
         browser.storage.sync.set({ "syncServerURL": "http://127.0.0.1:8000" })
     }
 }
@@ -21,47 +25,46 @@ function openSettingsPage() {
     browser.tabs.create({ url: "/options/options.html" })
 }
 
-
 // Toggle Blocking For Page ===========================================================================================
 async function toggleBlockedState(page) {
-    var url = page.url
-    url = url.endsWith('/') ? url.slice(0, -1) : url
+    var url = normalizeURL(page.url)
     var response = await queryURLs([url])
     if (response[url]) {
         console.log("Removing from Blocklist: " + url)
         await unblockURLs([url])
-        browser.tabs.reload()
+        browser.tabs.reload(page.id)
     } else {
         console.log("Adding to Blocklist: " + url)
         await blockURLs([url])
-        browser.tabs.reload()
+        browser.tabs.reload(page.id)
     }
 }
 
 // Respond to unblock requests from content script ======================================================================
-async function onMessage(message) {
+async function onMessage(message, sender) {
     if ("unblockRequested" in message) {
-        var urls = message.unblockRequested
+        var urls = message.unblockRequested.map(normalizeURL)
         await unblockURLs(urls)
-        browser.tabs.reload()
+        if (sender.tab) {
+            browser.tabs.reload(sender.tab.id)
+        }
     }
     if ("queryURLs" in message) {
-        var urls = message.queryURLs
+        var urls = message.queryURLs.map(normalizeURL)
         return await queryURLs(urls)
     }
     if ("getSetting" in message) {
         var key = message.getSetting
         return await getSetting(key)
     }
-
 }
 
 // Blocks the page when the context menu is clicked ===================================================================
 async function onContextMenuClicked(info, tab) {
+    var url = normalizeURL(info.linkUrl)
     console.log(`Blocking Link: ${url}`)
-    var url = info.linkUrl
     await blockURLs([url])
-    browser.tabs.reload()
+    browser.tabs.reload(tab.id)
 }
 
 browser.runtime.onInstalled.addListener(initialize)
