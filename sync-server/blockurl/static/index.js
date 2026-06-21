@@ -77,6 +77,10 @@ async function loadURLs() {
                 }
             ],
             initialSort: [{ column: "created_at", dir: "desc" }],
+            height: "auto",
+            pagination: true,
+            paginationSize: 50,
+            paginationSizeSelector: [25, 50, 100, 250],
         })
     } else {
         urlsTable.setData(urls)
