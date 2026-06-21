@@ -6,6 +6,16 @@ class DatabaseManager:
     # Common Methods ---------------------------------------------------------------------------------------------------
     def __init__(self, database_name="blockurl.db", create_tables=False, initialize_settings=False):
         self.database_name = database_name
+        # A single persistent connection for the life of the app, rather
+        # than opening (and leaking) a new connection on every call.
+        # check_same_thread=False because Flask's dev/prod servers may
+        # service requests on different threads; SQLite connections are
+        # safe to share across threads as long as access isn't truly
+        # concurrent, which our request-per-call pattern satisfies.
+        self._connection = sqlite3.connect(self.database_name, check_same_thread=False)
+        self._connection.execute("PRAGMA journal_mode=WAL")
+        self._connection.execute("PRAGMA busy_timeout=2000")
+
         if create_tables:
             self.create_all_tables()
             self.migrate_add_columns()
@@ -13,7 +23,7 @@ class DatabaseManager:
             self.init_settings()
 
     def _get_database_(self):
-        return sqlite3.connect(self.database_name)
+        return self._connection
 
     def create_all_tables(self):
         database = self._get_database_()
@@ -28,8 +38,6 @@ class DatabaseManager:
         ]
         for statement in create_table_statements:
             cursor.execute(statement)
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_urls_domain ON urls(domain)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_urls_created_at ON urls(created_at)")
         database.commit()
 
     def migrate_add_columns(self):
@@ -46,7 +54,7 @@ class DatabaseManager:
             cursor.execute("ALTER TABLE urls ADD COLUMN domain TEXT")
 
         if "created_at" not in existing_columns:
-            cursor.execute("ALTER TABLE urls ADD COLUMN created_at TEXT")
+            cursor.execute("ALTER TABLE urls ADD COLUMN created_at TEXT DEFAULT (datetime('now'))")
             # Existing rows have no real creation date on record. Stamping
             # "now" is the best available approximation, not a true value.
             cursor.execute("UPDATE urls SET created_at = datetime('now') WHERE created_at IS NULL")
@@ -63,6 +71,41 @@ class DatabaseManager:
             cursor.executemany(update_statement, updates)
             database.commit()
 
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_urls_domain ON urls(domain)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_urls_created_at ON urls(created_at)")
+        database.commit()
+
+        self._repair_created_at_default()
+
+    def _repair_created_at_default(self):
+        """
+        Fixes databases that already ran an earlier version of this migration,
+        which added created_at without a DEFAULT clause. SQLite can't alter a
+        column to add a default after the fact, so we rebuild the table.
+        Safe and cheap to call every startup: it's a no-op once the default
+        is correctly attached.
+        """
+        database = self._get_database_()
+        cursor = database.cursor()
+        cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='urls'")
+        table_sql = cursor.fetchone()[0]
+
+        if "DEFAULT (datetime('now'))" in table_sql or "DEFAULT (datetime(\"now\"))" in table_sql:
+            return  # default already attached correctly, nothing to do
+
+        cursor.execute("ALTER TABLE urls RENAME TO urls_old")
+        cursor.execute("""
+            CREATE TABLE urls (
+                url TEXT PRIMARY KEY,
+                domain TEXT,
+                created_at TEXT DEFAULT (datetime('now'))
+            )
+        """)
+        cursor.execute("""
+            INSERT INTO urls (url, domain, created_at)
+            SELECT url, domain, COALESCE(created_at, datetime('now')) FROM urls_old
+        """)
+        cursor.execute("DROP TABLE urls_old")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_urls_domain ON urls(domain)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_urls_created_at ON urls(created_at)")
         database.commit()
