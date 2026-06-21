@@ -1,4 +1,4 @@
-import { getSetting, saveSetting, getAllURLs, blockURLs, unblockURLs } from "./api.js"
+import { getSetting, saveSetting, getSortedURLs, blockURLs, unblockURLs } from "./api.js"
 
 // Settings Management ================================================================================================
 
@@ -32,25 +32,54 @@ function saveSettings() {
 
 // URLS ===============================================================================================================
 
+let urlsTable = null
+
 // Load URLs ----------------------------------------------------------------------------------------------------------
 async function loadURLs() {
     console.log("Loading URLs")
-    var urls = await getAllURLs()
-    urls.sort()
-    var urlsList = document.getElementById("urls-list")
-    urlsList.innerHTML = ""
-    for (let url of urls) {
-        var urlRow = document.createElement("li")
-        var urlLink = document.createElement('a')
-        urlLink.setAttribute('href', url)
-        urlLink.innerHTML = url
-        urlRow.appendChild(urlLink)
-        let deleteButton = document.createElement("button")
-        deleteButton.textContent = "Delete"
-        deleteButton.id = "delete-button"
-        deleteButton.addEventListener("click", deleteURL.bind(null, url))
-        urlRow.appendChild(deleteButton)
-        urlsList.appendChild(urlRow)
+    var urls = await getSortedURLs("created_at", true, null)
+
+    if (!urlsTable) {
+        urlsTable = new Tabulator("#urls-table", {
+            data: urls,
+            layout: "fitColumns",
+            placeholder: "No URLs blocked yet",
+            columns: [
+                {
+                    title: "URL",
+                    field: "url",
+                    widthGrow: 3,
+                    formatter: "link",
+                    formatterParams: { target: "_blank" }
+                },
+                {
+                    title: "Domain",
+                    field: "domain",
+                    widthGrow: 1,
+                    headerFilter: "input"
+                },
+                {
+                    title: "Added",
+                    field: "created_at",
+                    widthGrow: 1,
+                    sorter: "string"
+                },
+                {
+                    title: "",
+                    width: 90,
+                    hozAlign: "center",
+                    headerSort: false,
+                    formatter: () => "<button class='table-delete-btn'>Delete</button>",
+                    cellClick: async (e, cell) => {
+                        const url = cell.getRow().getData().url
+                        await deleteURL(url)
+                    }
+                }
+            ],
+            initialSort: [{ column: "created_at", dir: "desc" }],
+        })
+    } else {
+        urlsTable.setData(urls)
     }
 }
 
@@ -68,14 +97,15 @@ async function addURL() {
     console.log("Adding URL")
     var url = document.getElementById("add-url-entry").value
     await blockURLs([url])
+    document.getElementById("add-url-entry").value = ""
     await loadURLs()
 }
 
 // Export URLs --------------------------------------------------------------------------------------------------------
 async function exportURLs() {
     console.log("Exporting URLs")
-    var urls = await getAllURLs()
-    let urlsString = urls.join("\n")
+    var urls = await getSortedURLs("created_at", true, null)
+    let urlsString = urls.map((entry) => entry.url).join("\n")
     var exportLink = document.createElement('a')
     exportLink.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(urlsString))
     exportLink.setAttribute('download', "urls.txt")
@@ -112,5 +142,4 @@ document.addEventListener("DOMContentLoaded", initialize)
 document.getElementById("save-settings-button").addEventListener("click", saveSettings)
 document.getElementById("add-url-button").addEventListener("click", addURL)
 document.getElementById("export-urls-button").addEventListener("click", exportURLs)
-document.getElementById("append-urls-button").addEventListener("click", appendURLs);
-
+document.getElementById("append-urls-button").addEventListener("click", appendURLs)
