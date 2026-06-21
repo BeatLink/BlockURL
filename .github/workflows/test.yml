@@ -20,9 +20,20 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Guard against the unrelated PyPI "playhouse" package
+        # There is an unrelated package on PyPI named "playhouse" that
+        # installs files into the same site-packages/playhouse/ directory
+        # that peewee's own bundled playhouse subpackage uses. If it's
+        # ever pulled in (directly or transitively) it silently clobbers
+        # peewee's playhouse modules (e.g. playhouse.sqlite_ext loses
+        # SqliteExtDatabase). Make sure it's not present before installing.
+        run: pip uninstall -y playhouse || true
+
       - name: Install dependencies
         working-directory: sync-server
-        run: pip install -e ".[test]"
+        run: |
+          pip install --no-cache-dir --force-reinstall "peewee>=3.17,<4"
+          pip install -e ".[test]"
 
       - name: Run tests
         working-directory: sync-server
