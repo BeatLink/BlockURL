@@ -3,21 +3,27 @@
     If the page should be blocked, it loads the blocked page
     If the page shouldn't be blocked, instead it checks to see if links within the page should be blocked
 */
-
 "use strict"
-
 async function blockURLContentScript() {
     // Unblock ============================================================================================================
     function unblock() {
-        browser.runtime.sendMessage({ unblockRequested: [window.location.href] })
+        let url = window.location.href
+        url = url.endsWith('/') ? url.slice(0, -1) : url
+        browser.runtime.sendMessage({ unblockRequested: [url] })
     }
-
     // Blocking Page ======================================================================================================
     async function blockPage() {
         console.log("Blocking: " + window.location.href)
         const html = await (await fetch(browser.runtime.getURL("blocked.html"))).text()
         const parser = new DOMParser()
         const newDoc = parser.parseFromString(html, "text/html")
+        // Rewrite relative stylesheet hrefs to extension-resource URLs.
+        // Without this, the link would resolve against the current page's
+        // origin (since we're injecting into the real page's document) and
+        // silently fail to load.
+        newDoc.head.querySelectorAll('link[rel="stylesheet"]').forEach((link) => {
+            link.href = browser.runtime.getURL(link.getAttribute('href'))
+        })
         document.head.replaceChildren(...newDoc.head.childNodes)
         document.body.replaceChildren(...newDoc.body.childNodes)
         var button = document.getElementById("button")
@@ -32,7 +38,6 @@ async function blockURLContentScript() {
             settingsDict[key].textContent = response.replaceAll('"', '')
         }
     }
-
     // Block Links on page ================================================================================================
     async function blockLinks() {
         console.log("Blocking matching links on current page")
@@ -45,7 +50,7 @@ async function blockURLContentScript() {
         for (var type in types) {
             var elements = [...document.querySelectorAll(type)]
             elements.forEach((element, _) => {
-                url = element[types[type]]
+                let url = element[types[type]]
                 url = url.endsWith('/') ? url.slice(0, -1) : url
                 if (url in urlMap) {
                     urlMap[url].push(element)
@@ -53,7 +58,6 @@ async function blockURLContentScript() {
                     urlMap[url] = []
                     urlMap[url].push(element)
                 }
-
             })
         }
         var urls = Object.keys(urlMap)
@@ -65,13 +69,18 @@ async function blockURLContentScript() {
             }
         }
     }
-
+    // Debounced wrapper so rapid/frequent DOM mutations don't trigger a full
+    // re-scan + re-query of every link on the page on every single change.
+    let blockLinksTimeout = null
+    function scheduleBlockLinks() {
+        clearTimeout(blockLinksTimeout)
+        blockLinksTimeout = setTimeout(blockLinks, 200)
+    }
     // Main ===============================================================================================================
     async function main_script() {
         console.log("Checking to see if page should be blocked")
         var url = window.location.href
         url = url.endsWith('/') ? url.slice(0, -1) : url
-
         // Prevents running on its own sync server page
         var settings = await browser.storage.sync.get("syncServerURL")
         var syncServerURL = settings["syncServerURL"]
@@ -79,7 +88,6 @@ async function blockURLContentScript() {
         if (url == syncServerURL) {
             return
         }
-
         var response = await browser.runtime.sendMessage({ queryURLs: [url] })
         if (response[url]) {
             blockPage()
@@ -89,14 +97,11 @@ async function blockURLContentScript() {
                 childList: true,
                 subtree: true,
             }
-
-            const observer = new MutationObserver(blockLinks)
+            const observer = new MutationObserver(scheduleBlockLinks)
             observer.observe(document.body, observerOptions)
-
             blockLinks()
         }
     }
     main_script()
 }
-
 blockURLContentScript()

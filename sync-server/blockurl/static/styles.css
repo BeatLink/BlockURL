@@ -255,13 +255,19 @@ section:last-of-type td:last-child {
     margin-top: 20px;
     font-family: 'DM Sans', sans-serif;
     font-size: 0.9rem;
+    width: 100%;
 }
 
 #urls-table .tabulator {
     background: transparent;
     border: 1px solid var(--border);
     border-radius: 8px;
-    overflow: hidden;
+    overflow: visible;
+}
+
+#urls-table .tabulator-tableholder {
+    overflow: visible;
+    min-height: fit-content;
 }
 
 #urls-table .tabulator-header {

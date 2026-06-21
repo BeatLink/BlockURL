@@ -62,7 +62,16 @@ async function loadURLs() {
                     title: "Added",
                     field: "created_at",
                     widthGrow: 1,
-                    sorter: "string"
+                    sorter: "string",
+                    formatter: (cell) => {
+                        const raw = cell.getValue()
+                        if (!raw) return ""
+                        // SQLite's datetime('now') returns UTC without a "Z" suffix;
+                        // append it so the browser parses it as UTC instead of local time.
+                        const date = new Date(raw.replace(' ', 'T') + 'Z')
+                        if (isNaN(date.getTime())) return raw
+                        return date.toLocaleString()
+                    }
                 },
                 {
                     title: "",
@@ -77,6 +86,10 @@ async function loadURLs() {
                 }
             ],
             initialSort: [{ column: "created_at", dir: "desc" }],
+            height: "auto",
+            pagination: true,
+            paginationSize: 50,
+            paginationSizeSelector: [25, 50, 100, 250],
         })
     } else {
         urlsTable.setData(urls)
