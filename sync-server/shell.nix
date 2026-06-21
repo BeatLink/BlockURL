@@ -8,6 +8,7 @@ pkgs.mkShellNoCC {
             ps.flask 
             ps.uvicorn 
             ps.asgiref
+            ps.peewee
         ]))
     ];
     shellHook = ''

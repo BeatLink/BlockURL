@@ -16,6 +16,7 @@ python3.pkgs.buildPythonApplication {
         flask
         uvicorn
         asgiref
+        peewee
     ];
 
     meta = with lib; {
