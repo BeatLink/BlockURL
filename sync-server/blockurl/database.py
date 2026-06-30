@@ -6,7 +6,7 @@ from playhouse.sqlite_ext import SqliteExtDatabase
 from playhouse.migrate import SqliteMigrator, migrate
 
 # 1. Initialize an un-deferred database proxy
-db = SqliteExtDatabase(None, thread_locals=True)  # thread_locals=True gives each thread its own connection
+db = SqliteExtDatabase(None)  # Peewee 3.x uses thread-local connections by default
 
 
 # 2. Declarative Models (Bound to the Proxy Database)

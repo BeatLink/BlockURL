@@ -7,7 +7,7 @@ vi.mock('../api.js', () => ({
     blockURLs: vi.fn(),
     unblockURLs: vi.fn(),
     getSetting: vi.fn(),
-    removeTrailingSlashes: (urls) => urls,
+    removeTrailingSlashes: (urls) => urls.map(u => u.endsWith('/') ? u.slice(0, -1) : u),
 }))
 
 describe('background.js', () => {

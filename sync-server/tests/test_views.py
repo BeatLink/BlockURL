@@ -89,3 +89,92 @@ def test_urls_block_unescapes_html_entities(client):
     client.post("/urls/block", json={"urls": ["https://example.com/?a=1&amp;b=2"]})
     response = client.get("/urls/all")
     assert "https://example.com/?a=1&b=2" in response.get_json()
+
+
+# Input validation ---------------------------------------------------------------------------------
+
+def test_settings_get_wrong_content_type_returns_error(client):
+    response = client.post("/settings/get", data="not json", content_type="text/plain")
+    assert response.status_code in (400, 415)
+
+def test_settings_get_missing_key_returns_400(client):
+    response = client.post("/settings/get", json={})
+    assert response.status_code == 400
+
+def test_settings_set_missing_value_returns_400(client):
+    response = client.post("/settings/set", json={"key": "k"})
+    assert response.status_code == 400
+
+def test_urls_check_missing_urls_returns_400(client):
+    response = client.post("/urls/check", json={})
+    assert response.status_code == 400
+
+def test_urls_block_missing_urls_returns_400(client):
+    response = client.post("/urls/block", json={})
+    assert response.status_code == 400
+
+def test_urls_unblock_missing_urls_returns_400(client):
+    response = client.post("/urls/unblock", json={})
+    assert response.status_code == 400
+
+def test_urls_block_non_list_returns_400(client):
+    response = client.post("/urls/block", json={"urls": "https://example.com"})
+    assert response.status_code == 400
+
+def test_urls_block_url_too_long_returns_400(client):
+    long_url = "https://example.com/" + "a" * 2048
+    response = client.post("/urls/block", json={"urls": [long_url]})
+    assert response.status_code == 400
+
+def test_urls_block_list_too_large_returns_400(client):
+    urls = [f"https://example.com/{i}" for i in range(10_001)]
+    response = client.post("/urls/block", json={"urls": urls})
+    assert response.status_code == 400
+
+
+# Authentication -----------------------------------------------------------------------------------
+
+from tests.conftest import TEST_API_KEY
+
+def test_auth_unauthenticated_redirects_to_login(auth_client):
+    response = auth_client.get("/")
+    assert response.status_code == 302
+    assert "/login" in response.headers["Location"]
+
+def test_auth_api_key_header_allows_access(auth_client):
+    response = auth_client.get("/urls/all", headers={"X-API-Key": TEST_API_KEY})
+    assert response.status_code == 200
+
+def test_auth_wrong_api_key_header_redirects(auth_client):
+    response = auth_client.get("/urls/all", headers={"X-API-Key": "wrong"})
+    assert response.status_code == 302
+
+def test_auth_login_page_renders(auth_client):
+    response = auth_client.get("/login")
+    assert response.status_code == 200
+    assert b"BlockURL" in response.data
+
+def test_auth_login_correct_key_sets_session_and_redirects(auth_client):
+    response = auth_client.post("/login", data={"api_key": TEST_API_KEY}, follow_redirects=False)
+    assert response.status_code == 302
+    assert response.headers["Location"] == "/"
+
+def test_auth_login_wrong_key_shows_error(auth_client):
+    response = auth_client.post("/login", data={"api_key": "wrong"})
+    assert response.status_code == 200
+    assert b"Invalid" in response.data
+
+def test_auth_session_allows_access_after_login(auth_client):
+    auth_client.post("/login", data={"api_key": TEST_API_KEY})
+    response = auth_client.get("/urls/all")
+    assert response.status_code == 200
+
+def test_auth_logout_clears_session(auth_client):
+    auth_client.post("/login", data={"api_key": TEST_API_KEY})
+    auth_client.get("/logout")
+    response = auth_client.get("/urls/all")
+    assert response.status_code == 302
+
+def test_no_auth_configured_allows_all(client):
+    response = client.get("/urls/all")
+    assert response.status_code == 200

@@ -88,6 +88,33 @@ describe('blockURLs / unblockURLs', () => {
     })
 })
 
+describe('API key auth', () => {
+    it('includes X-API-Key header when apiKey is configured', async () => {
+        globalThis.browser.storage.sync.get.mockResolvedValue({
+            syncServerURL: 'http://127.0.0.1:8000',
+            apiKey: 'my-secret',
+        })
+        globalThis.fetch.mockResolvedValue(mockJsonResponse([]))
+
+        await getAllURLs()
+
+        const [request] = globalThis.fetch.mock.calls[0]
+        expect(request.headers.get('X-API-Key')).toBe('my-secret')
+    })
+
+    it('omits X-API-Key header when apiKey is not set', async () => {
+        globalThis.browser.storage.sync.get.mockResolvedValue({
+            syncServerURL: 'http://127.0.0.1:8000',
+        })
+        globalThis.fetch.mockResolvedValue(mockJsonResponse([]))
+
+        await getAllURLs()
+
+        const [request] = globalThis.fetch.mock.calls[0]
+        expect(request.headers.get('X-API-Key')).toBeNull()
+    })
+})
+
 describe('error handling', () => {
     it('throws when syncServerURL is not configured', async () => {
         globalThis.browser.storage.sync.get.mockResolvedValue({})
