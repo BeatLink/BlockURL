@@ -1,11 +1,12 @@
 import datetime
+from datetime import timezone
 from urllib.parse import urlparse
 from peewee import *
 from playhouse.sqlite_ext import SqliteExtDatabase
 from playhouse.migrate import SqliteMigrator, migrate
 
 # 1. Initialize an un-deferred database proxy
-db = SqliteExtDatabase(None)  # Path is intentionally set to None initially
+db = SqliteExtDatabase(None, thread_locals=True)  # thread_locals=True gives each thread its own connection
 
 
 # 2. Declarative Models (Bound to the Proxy Database)
@@ -17,7 +18,7 @@ class BaseModel(Model):
 class URL(BaseModel):
     url = CharField(primary_key=True)
     domain = CharField(null=True, index=True)
-    created_at = DateTimeField(default=lambda: datetime.datetime.utcnow(), index=True)
+    created_at = DateTimeField(default=lambda: datetime.datetime.now(timezone.utc), index=True)
 
 
 class Setting(BaseModel):
@@ -86,7 +87,7 @@ class DatabaseManager:
         # historical value, since SQLite never recorded it before.
         # Stored as UTC to match the default on the field and how the
         # frontend interprets these timestamps.
-        URL.update(created_at=datetime.datetime.utcnow()).where(
+        URL.update(created_at=datetime.datetime.now(timezone.utc)).where(
             URL.created_at.is_null()
         ).execute()
 

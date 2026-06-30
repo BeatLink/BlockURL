@@ -6,11 +6,17 @@
 "use strict"
 
 async function blockURLContentScript() {
+    function normalizeURL(url) {
+        return url.endsWith('/') ? url.slice(0, -1) : url
+    }
     // Unblock ============================================================================================================
-    function unblock() {
-        let url = window.location.href
-        url = url.endsWith('/') ? url.slice(0, -1) : url
-        browser.runtime.sendMessage({ unblockRequested: [url] })
+    async function unblock() {
+        let url = normalizeURL(window.location.href)
+        try {
+            await browser.runtime.sendMessage({ unblockRequested: [url] })
+        } catch (err) {
+            console.error("BlockURL: failed to send unblock message", err)
+        }
     }
     // Blocking Page ======================================================================================================
     async function blockPage() {
@@ -36,7 +42,7 @@ async function blockURLContentScript() {
         }
         for (var key in settingsDict) {
             var response = await browser.runtime.sendMessage({ getSetting: key })
-            settingsDict[key].textContent = response.replaceAll('"', '')
+            settingsDict[key].textContent = response
         }
     }
     // Block Links on page ================================================================================================
@@ -64,7 +70,7 @@ async function blockURLContentScript() {
                 if (!url) {
                     return
                 }
-                url = url.endsWith('/') ? url.slice(0, -1) : url
+                url = normalizeURL(url)
 
                 // Already know the answer for this URL from an earlier scan -
                 // apply it immediately without going back to the server.
@@ -110,18 +116,20 @@ async function blockURLContentScript() {
     // Main ===============================================================================================================
     async function main_script() {
         console.log("Checking to see if page should be blocked")
-        var url = window.location.href
-        url = url.endsWith('/') ? url.slice(0, -1) : url
+        var url = normalizeURL(window.location.href)
         // Prevents running on its own sync server page
         var settings = await browser.storage.sync.get("syncServerURL")
         var syncServerURL = settings["syncServerURL"]
-        syncServerURL = syncServerURL.endsWith('/') ? syncServerURL.slice(0, -1) : syncServerURL
+        if (!syncServerURL) {
+            return
+        }
+        syncServerURL = normalizeURL(syncServerURL)
         if (url == syncServerURL) {
             return
         }
         var response = await browser.runtime.sendMessage({ queryURLs: [url] })
         if (response[url]) {
-            blockPage()
+            await blockPage()
         } else {
             const body = document.body
             const observerOptions = {

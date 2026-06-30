@@ -7,7 +7,7 @@ export function removeTrailingSlashes(urls) {
 }
 
 async function sendRequest(method, endpoint, payload = null) {
-    const settings = await browser.storage.sync.get("syncServerURL")
+    const settings = await browser.storage.sync.get(["syncServerURL", "apiKey"])
     let syncServerURL = settings["syncServerURL"]
 
     if (!syncServerURL) {
@@ -17,18 +17,19 @@ async function sendRequest(method, endpoint, payload = null) {
 
     syncServerURL = syncServerURL.endsWith('/') ? syncServerURL.slice(0, -1) : syncServerURL
 
-    // Only build the Request object we actually need, instead of constructing
-    // both a GET and a POST request on every call and discarding one.
+    const apiKey = settings["apiKey"] || ""
+    const authHeaders = apiKey ? { "X-API-Key": apiKey } : {}
+
     let request
     if (method === "GET") {
-        request = new Request(`${syncServerURL}/${endpoint}`, { mode: 'cors' })
+        request = new Request(`${syncServerURL}/${endpoint}`, { mode: 'cors', headers: authHeaders })
     } else {
         request = new Request(
             `${syncServerURL}/${endpoint}`,
             {
                 method: "POST",
                 mode: 'cors',
-                headers: { "Content-Type": "application/json;charset=UTF-8" },
+                headers: { "Content-Type": "application/json;charset=UTF-8", ...authHeaders },
                 body: JSON.stringify(payload)
             }
         )

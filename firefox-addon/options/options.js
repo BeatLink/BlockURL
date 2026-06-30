@@ -7,8 +7,9 @@ function normalizeURL(url) {
 // Load Sync Settings -------------------------------------------------------------------------------------------------
 async function loadSyncSettings() {
     console.log("Loading Sync Server URL")
-    const settings = await browser.storage.sync.get("syncServerURL")
+    const settings = await browser.storage.sync.get(["syncServerURL", "apiKey"])
     document.getElementById("sync-server-url").value = settings["syncServerURL"] || DEFAULT_SYNC_SERVER_URL
+    document.getElementById("api-key").value = settings["apiKey"] || ""
 }
 
 // Save Sync Settings -------------------------------------------------------------------------------------------------
@@ -17,7 +18,8 @@ async function saveSyncSettings() {
     const input = document.getElementById("sync-server-url")
     const url = normalizeURL(input.value.trim())
     input.value = url
-    await browser.storage.sync.set({ "syncServerURL": url })
+    const apiKey = document.getElementById("api-key").value.trim()
+    await browser.storage.sync.set({ "syncServerURL": url, "apiKey": apiKey })
     showSavedConfirmation()
     browser.tabs.reload()
 }

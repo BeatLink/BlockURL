@@ -67,6 +67,18 @@ in
             description = "System group that runs the service.";
         };
 
+        apiKeyFile = mkOption {
+            type = types.nullOr types.path;
+            default = null;
+            example = "/run/secrets/blockurl-api-key";
+            description = ''
+                Path to a file containing <literal>BLOCKURL_API_KEY=&lt;value&gt;</literal>.
+                When set, all API requests must include a matching
+                <literal>X-API-Key</literal> header. Compatible with agenix/sops-nix
+                secrets rendered in systemd EnvironmentFile format.
+            '';
+        };
+
         extraEnv = mkOption {
             type = types.attrsOf types.str;
             default = { };
@@ -113,6 +125,7 @@ in
                 User = cfg.user;
                 Group = cfg.group;
                 ExecStart = "${cfg.package}/bin/blockurl-server";
+                EnvironmentFiles = lib.optional (cfg.apiKeyFile != null) cfg.apiKeyFile;
                 Restart = "on-failure";
                 RestartSec = "5s";
 

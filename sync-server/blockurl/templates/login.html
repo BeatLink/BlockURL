@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BlockURL — Sign In</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --blue: #00acff;
+            --blue-dim: #00acff22;
+            --blue-mid: #0090d4;
+            --surface: #f4f9fe;
+            --card: #ffffff;
+            --border: #d6edf9;
+            --text: #0f2233;
+            --muted: #6b8fa8;
+            --radius: 14px;
+            --shadow: 0 2px 16px 0 #00acff18, 0 1px 4px 0 #00000010;
+            --transition: 0.18s cubic-bezier(.4, 0, .2, 1);
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--surface);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-image:
+                linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 40px 36px;
+            width: 100%;
+            max-width: 380px;
+        }
+        h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.7rem;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            margin-bottom: 28px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        h1::before {
+            content: '';
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--blue);
+            box-shadow: 0 0 0 4px var(--blue-dim), 0 0 0 8px #00acff0a;
+            flex-shrink: 0;
+            animation: pulse 2.4s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 4px var(--blue-dim), 0 0 0 8px #00acff0a; }
+            50%       { box-shadow: 0 0 0 7px var(--blue-dim), 0 0 0 14px #00acff06; }
+        }
+        label {
+            display: block;
+            font-size: 0.88rem;
+            font-weight: 500;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+        input[type="password"] {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.92rem;
+            color: var(--text);
+            background: var(--surface);
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 12px;
+            outline: none;
+            width: 100%;
+            transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+            margin-bottom: 20px;
+        }
+        input[type="password"]:focus {
+            border-color: var(--blue);
+            background: #fff;
+            box-shadow: 0 0 0 3px var(--blue-dim);
+        }
+        button {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 8px;
+            padding: 9px 18px;
+            border: none;
+            width: 100%;
+            background: var(--blue);
+            color: #fff;
+            box-shadow: 0 2px 8px #00acff30;
+            transition: background var(--transition), box-shadow var(--transition), transform var(--transition);
+        }
+        button:hover { background: var(--blue-mid); box-shadow: 0 4px 14px #00acff40; transform: translateY(-1px); }
+        button:active { transform: translateY(0); box-shadow: none; }
+        .error {
+            font-size: 0.88rem;
+            color: #c0392b;
+            background: #fdf0ef;
+            border: 1px solid #f5c6c2;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>BlockURL</h1>
+        {% if error %}
+        <p class="error">Invalid API key — please try again.</p>
+        {% endif %}
+        <form method="POST" action="/login">
+            <label for="api_key">API Key</label>
+            <input type="password" id="api_key" name="api_key" autofocus autocomplete="current-password">
+            <button type="submit">Sign in</button>
+        </form>
+    </div>
+</body>
+</html>

@@ -7,9 +7,8 @@ var contextMenu = {
     contexts: ["link"],
 }
 
-// Normalize a single URL the same way removeTrailingSlashes does for arrays ------------------------------------------
 function normalizeURL(url) {
-    return url.endsWith('/') ? url.slice(0, -1) : url
+    return removeTrailingSlashes([url])[0]
 }
 
 // Initialize Plugin Storage ==========================================================================================
