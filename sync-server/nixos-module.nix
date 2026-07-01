@@ -125,7 +125,7 @@ in
                 User = cfg.user;
                 Group = cfg.group;
                 ExecStart = "${cfg.package}/bin/blockurl-server";
-                EnvironmentFiles = lib.optional (cfg.apiKeyFile != null) cfg.apiKeyFile;
+                EnvironmentFile = lib.optional (cfg.apiKeyFile != null) cfg.apiKeyFile;
                 Restart = "on-failure";
                 RestartSec = "5s";
 
