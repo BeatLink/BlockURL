@@ -33,7 +33,7 @@
 
 BlockURL is a Firefox extension to block a specific URL or link. Unlike other blockers, it doesn't work on a domain or subdomain but on a specific URL. This is mainly useful for blocking visited articles, videos, pages and other content.
 
-BlockURL uses a self hosted Python Flask server in order to store all of the URLs that are blocked as well as the text for the blocked page. This enables an unlimited number of URLs to be stored, with the only limitations being SQLite and the filesystem. The sync server is hosted on DockerHub.
+BlockURL uses a self hosted Python NiceGUI server in order to store all of the URLs that are blocked as well as the text for the blocked page. This enables an unlimited number of URLs to be stored, with the only limitations being SQLite and the filesystem. The sync server is hosted on DockerHub.
 
 ## Rationale
 
@@ -202,7 +202,7 @@ cd sync-server
 python3 -m venv venv
 source venv/bin/activate
 pip install --no-cache-dir -e .
-DATABASE_PATH=blockurl.db blockurl-server
+BLOCKURL_DATABASE_PATH=blockurl.db blockurl-server
 ```
 
 The development sync server should now be accessible at [http://localhost:8000](http://localhost:8000).

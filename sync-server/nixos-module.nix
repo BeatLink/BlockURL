@@ -82,7 +82,7 @@ in
         extraEnv = mkOption {
             type = types.attrsOf types.str;
             default = { };
-            example = literalExpression ''{ FLASK_ENV = "production"; }'';
+            example = literalExpression ''{ NICEGUI_STORAGE_PATH = "/var/lib/blockurl/sessions"; }'';
             description = "Extra environment variables passed to the service process.";
         };
 
@@ -125,6 +125,7 @@ in
                 User = cfg.user;
                 Group = cfg.group;
                 ExecStart = "${cfg.package}/bin/blockurl-server";
+                WorkingDirectory = cfg.dataDir;
                 EnvironmentFile = lib.optional (cfg.apiKeyFile != null) cfg.apiKeyFile;
                 Restart = "on-failure";
                 RestartSec = "5s";

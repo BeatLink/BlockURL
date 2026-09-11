@@ -5,12 +5,11 @@
 pkgs.mkShellNoCC {
     packages = with pkgs; [
         (python3.withPackages (ps: [
-            ps.flask
-            ps.uvicorn
-            ps.asgiref
+            ps.nicegui
             ps.peewee
             ps.pytest
             ps.pytest-cov
+            ps.httpx
         ]))
     ];
     shellHook = ''

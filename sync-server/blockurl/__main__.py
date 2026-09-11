@@ -1,16 +1,25 @@
-import os
 import hashlib
-import uvicorn
-from asgiref.wsgi import WsgiToAsgi
-from flask import Flask, request, jsonify, session, redirect
-from .database import DatabaseManager, db
-from .views import index_bp, init_login, init_settings, init_urls
+import os
+from pathlib import Path
+
 
 def launch_app():
     host = os.environ.get('BLOCKURL_HOST', '0.0.0.0')
     port = int(os.environ.get('BLOCKURL_PORT', 8000))
     database_path = os.environ.get('BLOCKURL_DATABASE_PATH', "blockurl.db")
     api_key = os.environ.get('BLOCKURL_API_KEY', '').strip() or None
+
+    # Sessions live next to the database, which is the one directory the server
+    # is guaranteed to be allowed to write. NiceGUI reads this when it loads,
+    # so it has to be set before anything imports it.
+    os.environ.setdefault('NICEGUI_STORAGE_PATH', str(Path(database_path).resolve().parent / '.nicegui'))
+
+    from nicegui import app, ui
+    from .api import build_api
+    from .auth import register_auth
+    from .database import DatabaseManager
+    from .pages import register_pages
+
     database = DatabaseManager(
         database_name=database_path,
         create_tables=True,
@@ -18,40 +27,22 @@ def launch_app():
     )
     database.close()
 
-    app = Flask(__name__,
-        template_folder='templates',
-        static_folder='static'
+    app.include_router(build_api(database))
+    if api_key:
+        register_auth(api_key)
+    register_pages(database, api_key)
+
+    ui.run(
+        host=host,
+        port=port,
+        title='BlockURL Sync Server',
+        favicon='🚫',
+        dark=None,
+        show=False,
+        reload=False,
+        storage_secret=hashlib.sha256(b'blockurl-session:' + api_key.encode()).hexdigest() if api_key else None,
     )
 
-    if api_key:
-        app.secret_key = hashlib.sha256(b'blockurl-session:' + api_key.encode()).digest()
 
-    @app.before_request
-    def before_request():
-        if api_key:
-            path = request.path
-            if path == '/login' or path.startswith('/static/'):
-                pass
-            elif request.headers.get('X-API-Key') == api_key:
-                pass
-            elif not session.get('authenticated'):
-                next_path = path
-                return redirect(f'/login?next={next_path}')
-        db.connect(reuse_if_open=True)
-
-    @app.teardown_request
-    def teardown_request(exception=None):
-        if not db.is_closed():
-            db.close()
-
-    app.register_blueprint(index_bp)
-    if api_key:
-        app.register_blueprint(init_login(api_key))
-    app.register_blueprint(init_settings(database))
-    app.register_blueprint(init_urls(database))
-    
-    asgi_app = WsgiToAsgi(app)
-    uvicorn.run(asgi_app, host=host, port=port)
-
-if __name__ == "__main__": 
+if __name__ in {"__main__", "__mp_main__"}:
     launch_app()

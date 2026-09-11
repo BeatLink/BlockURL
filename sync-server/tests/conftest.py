@@ -1,51 +1,14 @@
-import hashlib
 import os
 import tempfile
 
 import pytest
-from flask import Flask, request, jsonify, session, redirect
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
+from blockurl.api import build_api
 from blockurl.database import DatabaseManager, db
-from blockurl.views import index_bp, init_login, init_settings, init_urls
 
 TEST_API_KEY = "test-secret-key"
-
-
-def _make_app(database, api_key=None):
-    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    flask_app = Flask(
-        __name__,
-        template_folder=os.path.join(here, "blockurl", "templates"),
-        static_folder=os.path.join(here, "blockurl", "static"),
-    )
-    flask_app.config.update(TESTING=True)
-
-    if api_key:
-        flask_app.secret_key = hashlib.sha256(b'blockurl-session:' + api_key.encode()).digest()
-
-    @flask_app.before_request
-    def before_request():
-        if api_key:
-            path = request.path
-            if path == '/login' or path.startswith('/static/'):
-                pass
-            elif request.headers.get('X-API-Key') == api_key:
-                pass
-            elif not session.get('authenticated'):
-                return redirect(f'/login?next={path}')
-        db.connect(reuse_if_open=True)
-
-    @flask_app.teardown_request
-    def teardown_request(exception=None):
-        if not db.is_closed():
-            db.close()
-
-    flask_app.register_blueprint(index_bp)
-    if api_key:
-        flask_app.register_blueprint(init_login(api_key))
-    flask_app.register_blueprint(init_settings(database))
-    flask_app.register_blueprint(init_urls(database))
-    return flask_app
 
 
 @pytest.fixture
@@ -69,19 +32,23 @@ def database():
 
 @pytest.fixture
 def app(database):
-    return _make_app(database)
+    """The API on a bare FastAPI app, without the NiceGUI frontend around it."""
+    api_app = FastAPI()
+    api_app.include_router(build_api(database))
+    return api_app
 
 
 @pytest.fixture
 def client(app):
-    return app.test_client()
+    return TestClient(app)
 
 
-@pytest.fixture
-def auth_app(database):
-    return _make_app(database, api_key=TEST_API_KEY)
-
-
-@pytest.fixture
-def auth_client(auth_app):
-    return auth_app.test_client()
+@pytest.fixture(autouse=True)
+def ui_environment(request, monkeypatch, tmp_path):
+    """Configure the entry point the UI tests run, before NiceGUI builds the app."""
+    monkeypatch.setenv("BLOCKURL_DATABASE_PATH", str(tmp_path / "blockurl.db"))
+    marker = request.node.get_closest_marker("blockurl_api_key")
+    if marker:
+        monkeypatch.setenv("BLOCKURL_API_KEY", marker.args[0])
+    else:
+        monkeypatch.delenv("BLOCKURL_API_KEY", raising=False)

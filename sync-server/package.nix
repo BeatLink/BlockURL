@@ -13,9 +13,7 @@ python3.pkgs.buildPythonApplication {
         wheel
     ];
     propagatedBuildInputs = with python3.pkgs; [
-        flask
-        uvicorn
-        asgiref
+        nicegui
         peewee
     ];
 

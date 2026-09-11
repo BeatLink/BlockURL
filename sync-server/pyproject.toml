@@ -5,13 +5,11 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "blockurl"
 version = "5.0.0"
-description = "BlockURL Self Hosted Server (uvicorn)"
-requires-python = ">=3.8"
+description = "BlockURL Self Hosted Server (NiceGUI)"
+requires-python = ">=3.10"
 
 dependencies = [
-    "flask",
-    "uvicorn",
-    "asgiref",
+    "nicegui>=3,<4",
     "peewee>=3.17,<4",
 ]
 
@@ -19,6 +17,8 @@ dependencies = [
 test = [
     "pytest",
     "pytest-cov",
+    "pytest-asyncio",
+    "httpx",
 ]
 
 [project.scripts]
@@ -27,11 +27,10 @@ blockurl-server = "blockurl.__main__:launch_app"
 [tool.setuptools.packages.find]
 where = ["."]
 
-[tool.setuptools.package-data]
-blockurl = [
-    "templates/**/*",
-    "static/**/*",
-]
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-p nicegui.testing.user_plugin"
+# The UI tests drive the real entry point, which registers every page and route.
+main_file = "tests/ui_main.py"
+markers = ["blockurl_api_key: run the app with this API key configured"]

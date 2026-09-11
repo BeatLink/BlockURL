@@ -9,6 +9,16 @@ from playhouse.migrate import SqliteMigrator, migrate
 db = SqliteExtDatabase(None)  # Peewee 3.x uses thread-local connections by default
 
 
+def in_connection(call, *args, **kwargs):
+    """Run a database call with a connection belonging to the calling thread.
+
+    Peewee keeps one connection per thread, and the server hands work to worker
+    threads, so the connection has to be opened and closed where the work runs.
+    """
+    with db.connection_context():
+        return call(*args, **kwargs)
+
+
 # 2. Declarative Models (Bound to the Proxy Database)
 class BaseModel(Model):
     class Meta:
