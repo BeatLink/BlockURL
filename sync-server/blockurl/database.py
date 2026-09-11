@@ -150,14 +150,23 @@ class DatabaseManager:
         return netloc.lower()
 
     def set_urls(self, urls):
+        """
+        Block every URL in the list and report what happened, so an import
+        can tell the user how much was new. "merged" covers everything that
+        did not create a new row: URLs already blocked, plus any repeated
+        within this list. received == added + merged always holds.
+        """
         if not urls:
-            return True
-        data = [{"url": url, "domain": self._extract_domain(url)} for url in urls]
+            return {"received": 0, "added": 0, "merged": 0}
+        unique_urls = list(dict.fromkeys(urls))
+        already_blocked = sum(self.get_urls_exist(unique_urls).values())
+        added = len(unique_urls) - already_blocked
+        data = [{"url": url, "domain": self._extract_domain(url)} for url in unique_urls]
         URL.insert_many(data).on_conflict(
             conflict_target=[URL.url],
             update={URL.domain: EXCLUDED.domain}
         ).execute()
-        return True
+        return {"received": len(urls), "added": added, "merged": len(urls) - added}
 
     def delete_urls(self, urls):
         if not urls:
@@ -197,3 +206,9 @@ class DatabaseManager:
                  .group_by(URL.domain)
                  .order_by(SQL('count DESC')))
         return [(row.domain, row.count) for row in query]
+
+    def get_stats(self):
+        """Headline numbers for the dashboard: how many URLs, across how many domains."""
+        total_urls = URL.select().count()
+        unique_domains = URL.select(fn.COUNT(fn.DISTINCT(URL.domain))).scalar() or 0
+        return {"total_urls": total_urls, "unique_domains": unique_domains}

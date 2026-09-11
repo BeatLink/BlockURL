@@ -65,3 +65,7 @@ export async function getSortedURLs(orderBy = "created_at", descending = true, d
 export async function getDomainsWithCounts() {
     return await sendRequest("GET", "urls/domains")
 }
+
+export async function getStats() {
+    return await sendRequest("GET", "urls/stats")
+}

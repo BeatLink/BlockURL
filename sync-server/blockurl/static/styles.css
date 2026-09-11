@@ -117,6 +117,55 @@ h2::after {
     border-radius: 2px;
 }
 
+/* ── Metrics ────────────────────────────────────────────────────────────── */
+#metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.metric {
+    flex: 1 1 160px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+}
+
+.metric-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.9rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--blue-mid);
+    letter-spacing: -0.02em;
+}
+
+.metric-label {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+/* ── Import Status ──────────────────────────────────────────────────────── */
+#import-status {
+    font-size: 0.86rem;
+    color: var(--blue-mid);
+    background: var(--blue-dim);
+    border-radius: 8px;
+    padding: 8px 12px;
+}
+
+#import-status.error {
+    color: #a3341f;
+    background: #a3341f18;
+}
+
 /* ── Tables ─────────────────────────────────────────────────────────────── */
 table {
     width: 100%;
@@ -229,7 +278,7 @@ button {
 }
 
 /* ── Import row: file + button inline ───────────────────────────────────── */
-#urls-section td:last-child {
+#urls-section tr:not(#import-status-row) td:last-child {
     display: flex;
     align-items: center;
     gap: 10px;

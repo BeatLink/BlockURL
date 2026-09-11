@@ -126,4 +126,8 @@ def init_urls(database):
     def domains():
         return jsonify(database.get_domains_with_counts())
 
+    @urls_bp.route('/stats', methods=["GET"])
+    def stats():
+        return jsonify(database.get_stats())
+
     return urls_bp

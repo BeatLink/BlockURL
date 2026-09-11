@@ -1,4 +1,4 @@
-import { getSetting, saveSetting, getSortedURLs, blockURLs, unblockURLs } from "./api.js"
+import { getSetting, saveSetting, getSortedURLs, blockURLs, unblockURLs, getStats } from "./api.js"
 
 // Settings Management ================================================================================================
 
@@ -28,6 +28,20 @@ function saveSettings() {
             (response) => { }
         )
     }
+}
+
+// METRICS ============================================================================================================
+
+// Load Metrics -------------------------------------------------------------------------------------------------------
+async function loadMetrics() {
+    console.log("Loading Metrics")
+    const stats = await getStats()
+    document.getElementById("metric-total-urls").textContent = formatCount(stats["total_urls"])
+    document.getElementById("metric-unique-domains").textContent = formatCount(stats["unique_domains"])
+}
+
+function formatCount(value) {
+    return typeof value === "number" ? value.toLocaleString() : "0"
 }
 
 // URLS ===============================================================================================================
@@ -102,6 +116,7 @@ async function deleteURL(url) {
     if (confirm(`Delete ${url}?`)) {
         await unblockURLs([url])
         await loadURLs()
+        await loadMetrics()
     }
 }
 
@@ -112,6 +127,7 @@ async function addURL() {
     await blockURLs([url])
     document.getElementById("add-url-entry").value = ""
     await loadURLs()
+    await loadMetrics()
 }
 
 // Export URLs --------------------------------------------------------------------------------------------------------
@@ -129,19 +145,67 @@ async function exportURLs() {
 }
 
 // AppendURLs ---------------------------------------------------------------
-function appendURLs() {
+async function appendURLs() {
     console.log("Appending URLs from File")
     const [file] = document.getElementById("urls-file-button").files
-    const reader = new FileReader()
-    reader.addEventListener("load", async () => {
-        var urls = reader.result.split("\n")
-        urls = urls.filter((entry) => { return entry.trim() != '' })
-        await blockURLs(urls)
-        await loadURLs()
-    }, false)
-    if (file) {
-        reader.readAsText(file)
+    if (!file) {
+        showImportStatus("Choose a file to import first.", true)
+        return
     }
+
+    showImportStatus(`Importing ${file.name}...`)
+    let result
+    try {
+        const text = await file.text()
+        const urls = text.split("\n").map((entry) => entry.trim()).filter((entry) => entry != '')
+        if (urls.length == 0) {
+            showImportStatus(`${file.name} contains no URLs.`, true)
+            return
+        }
+        result = await blockURLsInBatches(urls)
+    } catch (error) {
+        console.error(error)
+        showImportStatus(`Could not import ${file.name}: ${error.message}`, true)
+        return
+    }
+
+    showImportStatus(describeImport(file.name, result))
+    await loadURLs()
+    await loadMetrics()
+}
+
+// Send a big import in server-sized batches and add up the counts -----------------------------------------------------
+const IMPORT_BATCH_SIZE = 5000
+
+async function blockURLsInBatches(urls) {
+    const totals = { received: 0, added: 0, merged: 0 }
+    for (let start = 0; start < urls.length; start += IMPORT_BATCH_SIZE) {
+        const batch = urls.slice(start, start + IMPORT_BATCH_SIZE)
+        const response = await blockURLs(batch)
+        if (!response || typeof response["received"] != "number") {
+            throw new Error(response && response["error"] ? response["error"] : "unexpected response from server")
+        }
+        totals.received += response["received"]
+        totals.added += response["added"]
+        totals.merged += response["merged"]
+    }
+    return totals
+}
+
+// Turn the server's import counts into a sentence ----------------------------------------------------------------------
+function describeImport(fileName, result) {
+    const received = formatCount(result["received"])
+    const added = formatCount(result["added"])
+    const merged = formatCount(result["merged"])
+    return `Imported ${received} URLs from ${fileName}: ${added} added, ${merged} merged (already blocked or repeated).`
+}
+
+// Import Status Message ------------------------------------------------------------------------------------------------
+function showImportStatus(message, isError = false) {
+    const status = document.getElementById("import-status")
+    status.textContent = message
+    status.classList.toggle("error", isError)
+    document.getElementById("import-status-row").hidden = false
 }
 
 // Initialization =====================================================================================================
@@ -149,6 +213,7 @@ async function initialize() {
     console.log("Loading Options Page")
     await loadSettings()
     await loadURLs()
+    await loadMetrics()
 }
 
 document.addEventListener("DOMContentLoaded", initialize)

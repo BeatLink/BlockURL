@@ -84,6 +84,18 @@ def test_urls_domains(client):
     assert domains["a.com"] == 2
 
 
+def test_urls_stats(client):
+    client.post("/urls/block", json={"urls": ["https://a.com/1", "https://a.com/2", "https://b.com/1"]})
+    response = client.get("/urls/stats")
+    assert response.get_json() == {"total_urls": 3, "unique_domains": 2}
+
+
+def test_urls_block_returns_import_counts(client):
+    client.post("/urls/block", json={"urls": ["https://a.com/1"]})
+    response = client.post("/urls/block", json={"urls": ["https://a.com/1", "https://b.com/1"]})
+    assert response.get_json() == {"received": 2, "added": 1, "merged": 1}
+
+
 def test_urls_block_unescapes_html_entities(client):
     # html.unescape is applied to incoming URLs - make sure entities round-trip
     client.post("/urls/block", json={"urls": ["https://example.com/?a=1&amp;b=2"]})

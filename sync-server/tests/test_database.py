@@ -27,8 +27,24 @@ def test_set_urls_is_idempotent(database):
 
 
 def test_set_urls_empty_list_noop(database):
-    assert database.set_urls([]) is True
+    assert database.set_urls([]) == {"received": 0, "added": 0, "merged": 0}
     assert database.get_all_urls() == []
+
+
+def test_set_urls_reports_added_and_merged(database):
+    assert database.set_urls(["https://a.com/1", "https://a.com/2"]) == {
+        "received": 2, "added": 2, "merged": 0,
+    }
+    assert database.set_urls(["https://a.com/2", "https://b.com/1"]) == {
+        "received": 2, "added": 1, "merged": 1,
+    }
+
+
+def test_set_urls_counts_repeats_within_the_list_as_merged(database):
+    assert database.set_urls(["https://a.com/1", "https://a.com/1"]) == {
+        "received": 2, "added": 1, "merged": 1,
+    }
+    assert database.get_all_urls() == ["https://a.com/1"]
 
 
 def test_delete_urls(database):
@@ -66,6 +82,15 @@ def test_get_urls_sorted_filters_by_domain(database):
     database.set_urls(["https://a.com/1", "https://a.com/2", "https://b.com/1"])
     rows = database.get_urls_sorted(domain="a.com")
     assert {r[0] for r in rows} == {"https://a.com/1", "https://a.com/2"}
+
+
+def test_get_stats_counts_urls_and_domains(database):
+    database.set_urls(["https://a.com/1", "https://a.com/2", "https://b.com/1"])
+    assert database.get_stats() == {"total_urls": 3, "unique_domains": 2}
+
+
+def test_get_stats_on_empty_database(database):
+    assert database.get_stats() == {"total_urls": 0, "unique_domains": 0}
 
 
 def test_get_domains_with_counts(database):
