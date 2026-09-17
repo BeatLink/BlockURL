@@ -9,6 +9,15 @@ async function blockURLContentScript() {
     function normalizeURL(url) {
         return url.endsWith('/') ? url.slice(0, -1) : url
     }
+    // Only web pages can be blocked, so blob:, data: and about: URLs never reach the server.
+    function isCheckable(url) {
+        return typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://"))
+    }
+    // A <source> has no box of its own, so hiding it does nothing - hide the player around it.
+    function hideElement(element) {
+        const target = element.tagName === "SOURCE" && element.parentElement ? element.parentElement : element
+        target.style.setProperty('display', 'none', 'important')
+    }
     // Unblock ============================================================================================================
     async function unblock() {
         let url = normalizeURL(window.location.href)
@@ -58,7 +67,10 @@ async function blockURLContentScript() {
         var urlMap = new Object()
         var types = {
             "a": "href",
-            "img": "src"
+            "img": "src",
+            "iframe": "src",
+            "video": "src",
+            "source": "src"
         }
         for (var type in types) {
             var elements = [...document.querySelectorAll(type)]
@@ -67,7 +79,7 @@ async function blockURLContentScript() {
                     return
                 }
                 let url = element[types[type]]
-                if (!url) {
+                if (!isCheckable(url)) {
                     return
                 }
                 url = normalizeURL(url)
@@ -76,7 +88,7 @@ async function blockURLContentScript() {
                 // apply it immediately without going back to the server.
                 if (urlBlockStatusCache.has(url)) {
                     if (urlBlockStatusCache.get(url)) {
-                        element.style.setProperty('display', 'none', 'important')
+                        hideElement(element)
                     }
                     processedElements.add(element)
                     return
@@ -101,7 +113,7 @@ async function blockURLContentScript() {
             for (var element of urlMap[url]) {
                 processedElements.add(element)
                 if (response[url]) {
-                    element.style.setProperty('display', 'none', 'important')
+                    hideElement(element)
                 }
             }
         }
@@ -116,30 +128,36 @@ async function blockURLContentScript() {
     // Main ===============================================================================================================
     async function main_script() {
         console.log("Checking to see if page should be blocked")
-        var url = normalizeURL(window.location.href)
-        // Prevents running on its own sync server page
+        if (!document.body) {
+            return
+        }
         var settings = await browser.storage.sync.get("syncServerURL")
         var syncServerURL = settings["syncServerURL"]
         if (!syncServerURL) {
             return
         }
         syncServerURL = normalizeURL(syncServerURL)
-        if (url == syncServerURL) {
-            return
-        }
-        var response = await browser.runtime.sendMessage({ queryURLs: [url] })
-        if (response[url]) {
-            await blockPage()
-        } else {
-            const body = document.body
-            const observerOptions = {
-                childList: true,
-                subtree: true,
+        // A frame its parent wrote, such as an embed wrapper, has no address of its own worth
+        // checking, but the embeds inside it still need scanning.
+        var url = normalizeURL(window.location.href)
+        if (isCheckable(url)) {
+            // Prevents running on its own sync server page
+            if (url == syncServerURL) {
+                return
             }
-            const observer = new MutationObserver(scheduleBlockLinks)
-            observer.observe(document.body, observerOptions)
-            blockLinks()
+            var response = await browser.runtime.sendMessage({ queryURLs: [url] })
+            if (response[url]) {
+                await blockPage()
+                return
+            }
         }
+        const observerOptions = {
+            childList: true,
+            subtree: true,
+        }
+        const observer = new MutationObserver(scheduleBlockLinks)
+        observer.observe(document.body, observerOptions)
+        blockLinks()
     }
     main_script()
 }
