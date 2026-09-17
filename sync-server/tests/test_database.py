@@ -125,3 +125,40 @@ def test_extract_domain_handles_bare_host():
     assert DatabaseManager._extract_domain("example.com/page") == "example.com"
     assert DatabaseManager._extract_domain("https://example.com/page") == "example.com"
     assert DatabaseManager._extract_domain("https://EXAMPLE.com") == "example.com"
+
+
+def test_an_embed_url_matches_the_blocked_watch_page(database):
+    database.set_urls(["https://www.redgifs.com/watch/AbleGoat"])
+    result = database.get_urls_exist([
+        "https://redgifs.com/ifr/ablegoat",
+        "https://media.redgifs.com/AbleGoat-mobile.mp4",
+        "https://redgifs.com/ifr/othergoat",
+    ])
+    assert result == {
+        "https://redgifs.com/ifr/ablegoat": True,
+        "https://media.redgifs.com/AbleGoat-mobile.mp4": True,
+        "https://redgifs.com/ifr/othergoat": False,
+    }
+
+
+def test_blocking_a_second_spelling_does_not_add_a_row(database):
+    database.set_urls(["https://www.redgifs.com/watch/AbleGoat"])
+    assert database.set_urls(["https://redgifs.com/ifr/ablegoat"]) == {
+        "received": 1, "added": 0, "merged": 1,
+    }
+    assert database.get_all_urls() == ["https://www.redgifs.com/watch/AbleGoat"]
+
+
+def test_unblocking_any_spelling_removes_the_page(database):
+    database.set_urls(["https://www.redgifs.com/watch/AbleGoat"])
+    database.delete_urls(["https://redgifs.com/ifr/ablegoat"])
+    assert database.get_all_urls() == []
+
+
+def test_match_key_is_backfilled_for_rows_stored_without_one(database):
+    URL.insert(url="https://www.redgifs.com/watch/AbleGoat", domain="www.redgifs.com").execute()
+    URL.update(match_key=None).execute()
+    database.migrate_add_columns()
+    assert database.get_urls_exist(["https://redgifs.com/ifr/ablegoat"]) == {
+        "https://redgifs.com/ifr/ablegoat": True,
+    }

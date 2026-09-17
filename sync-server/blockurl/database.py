@@ -5,6 +5,8 @@ from peewee import *
 from playhouse.sqlite_ext import SqliteExtDatabase
 from playhouse.migrate import SqliteMigrator, migrate
 
+from .matching import match_key
+
 # 1. Initialize an un-deferred database proxy
 db = SqliteExtDatabase(None)  # Peewee 3.x uses thread-local connections by default
 
@@ -28,12 +30,21 @@ class BaseModel(Model):
 class URL(BaseModel):
     url = CharField(primary_key=True)
     domain = CharField(null=True, index=True)
+    match_key = CharField(null=True, index=True)
     created_at = DateTimeField(default=lambda: datetime.datetime.now(timezone.utc), index=True)
 
 
 class Setting(BaseModel):
     key = CharField(primary_key=True)
     value = CharField()
+
+
+def _first_per_key(urls):
+    """Keep the first URL for each canonical key, so one page never gets two rows."""
+    seen = {}
+    for url in urls:
+        seen.setdefault(match_key(url), url)
+    return list(seen.values())
 
 
 # 3. Dynamic Database Manager
@@ -60,7 +71,7 @@ class DatabaseManager:
     # Migration ----------------------------------------------------------------------------------------------------
     def migrate_add_columns(self):
         """
-        One-time migration for databases created before domain/created_at
+        One-time migration for databases created before domain/match_key/created_at
         existed on the url table. Safe to call every startup: each piece
         checks current state first and is a no-op once applied.
         """
@@ -73,6 +84,9 @@ class DatabaseManager:
 
         if "domain" not in existing_columns:
             pending_migrations.append(migrator.add_column(table_name, "domain", URL.domain))
+
+        if "match_key" not in existing_columns:
+            pending_migrations.append(migrator.add_column(table_name, "match_key", URL.match_key))
 
         if "created_at" not in existing_columns:
             # add_column with a peewee field that has a Python-side default
@@ -90,6 +104,14 @@ class DatabaseManager:
         ))
         for row in rows_needing_domain:
             row.domain = self._extract_domain(row.url)
+            row.save()
+
+        # Backfill match_key for any rows stored before matching moved off the raw URL.
+        rows_needing_key = list(URL.select().where(
+            URL.match_key.is_null() | (URL.match_key == '')
+        ))
+        for row in rows_needing_key:
+            row.match_key = match_key(row.url)
             row.save()
 
         # Backfill created_at for any rows missing it. This is the best
@@ -117,6 +139,11 @@ class DatabaseManager:
             index_name = f"{table_name}_domain"
             if index_name not in existing_indexes:
                 pending.append(migrator.add_index(table_name, ("domain",), False))
+
+        if "match_key" not in columns_that_existed_before:
+            index_name = f"{table_name}_match_key"
+            if index_name not in existing_indexes:
+                pending.append(migrator.add_index(table_name, ("match_key",), False))
 
         if "created_at" not in columns_that_existed_before:
             index_name = f"{table_name}_created_at"
@@ -163,32 +190,39 @@ class DatabaseManager:
         """
         Block every URL in the list and report what happened, so an import
         can tell the user how much was new. "merged" covers everything that
-        did not create a new row: URLs already blocked, plus any repeated
-        within this list. received == added + merged always holds.
+        did not create a new row: URLs already blocked under any spelling of
+        the same page, plus any repeated within this list. received == added
+        + merged always holds.
         """
         if not urls:
             return {"received": 0, "added": 0, "merged": 0}
         unique_urls = list(dict.fromkeys(urls))
-        already_blocked = sum(self.get_urls_exist(unique_urls).values())
-        added = len(unique_urls) - already_blocked
-        data = [{"url": url, "domain": self._extract_domain(url)} for url in unique_urls]
-        URL.insert_many(data).on_conflict(
-            conflict_target=[URL.url],
-            update={URL.domain: EXCLUDED.domain}
-        ).execute()
-        return {"received": len(urls), "added": added, "merged": len(urls) - added}
+        blocked = self.get_urls_exist(unique_urls)
+        new_urls = _first_per_key(url for url in unique_urls if not blocked[url])
+        data = [
+            {"url": url, "domain": self._extract_domain(url), "match_key": match_key(url)}
+            for url in new_urls
+        ]
+        if data:
+            URL.insert_many(data).on_conflict(
+                conflict_target=[URL.url],
+                update={URL.domain: EXCLUDED.domain, URL.match_key: EXCLUDED.match_key}
+            ).execute()
+        return {"received": len(urls), "added": len(data), "merged": len(urls) - len(data)}
 
     def delete_urls(self, urls):
         if not urls:
             return True
-        URL.delete().where(URL.url << urls).execute()
+        URL.delete().where(URL.match_key << [match_key(url) for url in urls]).execute()
         return True
 
     def get_urls_exist(self, urls):
+        """Report which URLs are blocked, matching on the canonical key rather than the raw URL."""
         if not urls:
             return {}
-        matches = {u.url for u in URL.select(URL.url).where(URL.url << urls)}
-        return {url: url in matches for url in urls}
+        keys = {url: match_key(url) for url in urls}
+        matches = {u.match_key for u in URL.select(URL.match_key).where(URL.match_key << list(keys.values()))}
+        return {url: keys[url] in matches for url in urls}
 
     def get_all_urls(self):
         return [u.url for u in URL.select(URL.url)]
