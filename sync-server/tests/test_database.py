@@ -162,3 +162,63 @@ def test_match_key_is_backfilled_for_rows_stored_without_one(database):
     assert database.get_urls_exist(["https://redgifs.com/ifr/ablegoat"]) == {
         "https://redgifs.com/ifr/ablegoat": True,
     }
+
+
+def test_migration_from_pre_match_key_database(tmp_path):
+    """A database predating match_key gets a real index and a completed backfill."""
+    import sqlite3
+
+    from blockurl.database import DatabaseManager, db
+
+    path = str(tmp_path / "legacy.db")
+    legacy = sqlite3.connect(path)
+    legacy.execute(
+        'CREATE TABLE "url" ("url" VARCHAR(255) NOT NULL PRIMARY KEY, "domain" VARCHAR(255))'
+    )
+    legacy.executemany(
+        'INSERT INTO url VALUES (?, ?)',
+        [(f"https://www.example.com/{i}", "www.example.com") for i in range(20)],
+    )
+    legacy.commit()
+    legacy.close()
+
+    manager = DatabaseManager(database_name=path, create_tables=True, initialize_settings=True)
+    try:
+        assert db.execute_sql("PRAGMA integrity_check").fetchone()[0] == "ok"
+        missing = db.execute_sql(
+            'SELECT count(*) FROM "url" NOT INDEXED WHERE "match_key" IS NULL'
+        ).fetchone()[0]
+        assert missing == 0
+        assert manager.get_urls_exist(["https://example.com/3"]) == {"https://example.com/3": True}
+    finally:
+        manager.close()
+
+
+def test_repairs_index_built_on_a_missing_column(tmp_path):
+    """An index an older version built before its column existed is rebuilt, not left broken."""
+    import sqlite3
+
+    from blockurl.database import DatabaseManager, db
+
+    path = str(tmp_path / "broken.db")
+    legacy = sqlite3.connect(path)
+    legacy.execute(
+        'CREATE TABLE "url" ("url" VARCHAR(255) NOT NULL PRIMARY KEY, "domain" VARCHAR(255))'
+    )
+    legacy.executemany(
+        'INSERT INTO url VALUES (?, ?)',
+        [(f"https://www.example.com/{i}", "www.example.com") for i in range(20)],
+    )
+    legacy.execute('CREATE INDEX "url_match_key" ON "url" ("match_key")')
+    legacy.execute('ALTER TABLE url ADD COLUMN "match_key" VARCHAR(255)')
+    legacy.commit()
+    assert legacy.execute("PRAGMA integrity_check").fetchone()[0] != "ok"
+    legacy.close()
+
+    manager = DatabaseManager(database_name=path, create_tables=True, initialize_settings=True)
+    try:
+        assert db.execute_sql("PRAGMA integrity_check").fetchone()[0] == "ok"
+        manager.set_urls(["https://www.example.com/1"])
+        assert manager.get_urls_exist(["https://example.com/1"]) == {"https://example.com/1": True}
+    finally:
+        manager.close()

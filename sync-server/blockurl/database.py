@@ -59,8 +59,10 @@ class DatabaseManager:
         db.connect(reuse_if_open=True)
 
         if create_tables:
+            # Columns must exist before create_tables indexes them, or SQLite indexes the name as a string literal.
+            if URL.table_exists():
+                self.migrate_add_columns()
             db.create_tables([URL, Setting])
-            self.migrate_add_columns()
         if initialize_settings:
             self.init_settings()
 
@@ -106,6 +108,8 @@ class DatabaseManager:
             row.domain = self._extract_domain(row.url)
             row.save()
 
+        self._repair_literal_indexes(table_name)
+
         # Backfill match_key for any rows stored before matching moved off the raw URL.
         rows_needing_key = list(URL.select().where(
             URL.match_key.is_null() | (URL.match_key == '')
@@ -124,6 +128,23 @@ class DatabaseManager:
         ).execute()
 
         self._ensure_indexes(migrator, table_name, existing_columns)
+
+    def _repair_literal_indexes(self, table_name):
+        """Rebuild any index an older version built on a column that did not exist yet."""
+        for column in ("domain", "match_key", "created_at"):
+            index_name = f"{table_name}_{column}"
+            cursor = db.execute_sql(f"PRAGMA index_list({table_name})")
+            if index_name not in {row[1] for row in cursor.fetchall()}:
+                continue
+            via_index = db.execute_sql(
+                f'SELECT count(*) FROM "{table_name}" INDEXED BY "{index_name}" WHERE "{column}" IS NULL'
+            ).fetchone()[0]
+            via_table = db.execute_sql(
+                f'SELECT count(*) FROM "{table_name}" NOT INDEXED WHERE "{column}" IS NULL'
+            ).fetchone()[0]
+            if via_index != via_table:
+                db.execute_sql(f'DROP INDEX "{index_name}"')
+                db.execute_sql(f'CREATE INDEX "{index_name}" ON "{table_name}" ("{column}")')
 
     def _ensure_indexes(self, migrator, table_name, columns_that_existed_before):
         """
