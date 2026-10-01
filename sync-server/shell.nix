@@ -9,6 +9,7 @@ pkgs.mkShellNoCC {
             ps.peewee
             ps.pytest
             ps.pytest-cov
+            ps.pytest-asyncio
             ps.httpx
         ]))
     ];
