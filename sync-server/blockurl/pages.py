@@ -6,6 +6,7 @@ from nicegui import app, run, ui
 
 from . import theme
 from .database import in_connection
+from .importing import parse_urls
 
 IMPORT_BATCH_SIZE = 5000
 
@@ -162,7 +163,7 @@ def register_pages(database, api_key):
             with ui.column().classes('halon-section'):
                 ui.label('Import & Export').classes('halon-section-label')
                 with ui.card().classes('halon-card'):
-                    ui.label('Import a .txt or .csv file with one URL per line.').classes('halon-hint')
+                    ui.label('Import a .txt file of URLs, or a .csv whose URL column is found by its header.').classes('halon-hint')
                     upload = ui.upload(label='Choose a file', auto_upload=True,
                                        on_upload=lambda e: import_file(e)) \
                         .props('accept=".csv,.txt,text/csv,text/plain" flat') \
@@ -287,8 +288,7 @@ def register_pages(database, api_key):
             show_import_status(f'Importing {name}...')
             text = await event.file.text()
             upload.reset()
-            urls = [line.strip().rstrip('/') for line in text.splitlines()]
-            urls = [url for url in urls if url]
+            urls = [url.rstrip('/') for url in parse_urls(text)]
             if not urls:
                 show_import_status(f'{name} contains no URLs.', 'danger')
                 return
