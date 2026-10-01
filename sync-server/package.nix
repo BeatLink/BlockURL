@@ -4,7 +4,7 @@
 }:
 python3.pkgs.buildPythonApplication {
     pname = "blockurl";
-    version = "5.0.0";
+    version = "5.1.0";
     src = ./.;
     format = "pyproject";
 

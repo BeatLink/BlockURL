@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "blockurl"
-version = "5.0.0"
+version = "5.1.0"
 description = "BlockURL Self Hosted Server (NiceGUI)"
 requires-python = ">=3.10"
 
