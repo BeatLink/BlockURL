@@ -2,21 +2,17 @@ import datetime
 from datetime import timezone
 from urllib.parse import urlparse
 from peewee import *
-from playhouse.sqlite_ext import SqliteExtDatabase
+from playhouse.pool import PooledSqliteDatabase
 from playhouse.migrate import SqliteMigrator, migrate
 
 from .matching import match_key
 
 # 1. Initialize an un-deferred database proxy
-db = SqliteExtDatabase(None)  # Peewee 3.x uses thread-local connections by default
+db = PooledSqliteDatabase(None, max_connections=None)  # worker thread pools already cap how many are open
 
 
 def in_connection(call, *args, **kwargs):
-    """Run a database call with a connection belonging to the calling thread.
-
-    Peewee keeps one connection per thread, and the server hands work to worker
-    threads, so the connection has to be opened and closed where the work runs.
-    """
+    """Run a database call on a pooled connection, so no request reopens the file or checkpoints the WAL."""
     with db.connection_context():
         return call(*args, **kwargs)
 
@@ -51,10 +47,17 @@ def _first_per_key(urls):
 class DatabaseManager:
     def __init__(self, database_name="blockurl.db", create_tables=False, initialize_settings=False):
         # Dynamically attach the chosen database name and custom optimization PRAGMAs
-        db.init(database_name, pragmas={
-            "journal_mode": "wal",
-            "busy_timeout": 2000,
-        })
+        if not db.deferred:
+            db.close_all()  # pooled connections still point at the previous database file
+        db.init(
+            database_name,
+            check_same_thread=False,  # pooled connections move between worker threads
+            pragmas={
+                "journal_mode": "wal",
+                "synchronous": "normal",  # WAL keeps this crash-safe; only the last commits can be lost on power failure
+                "busy_timeout": 10000,
+            },
+        )
 
         db.connect(reuse_if_open=True)
 
@@ -67,8 +70,7 @@ class DatabaseManager:
             self.init_settings()
 
     def close(self):
-        if not db.is_closed():
-            db.close()
+        db.close_all()
 
     # Migration ----------------------------------------------------------------------------------------------------
     def migrate_add_columns(self):
