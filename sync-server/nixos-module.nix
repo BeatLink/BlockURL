@@ -1,6 +1,7 @@
 {
     config,
     lib,
+    pkgs,
     blockurlPkg,
     ...
 }:
@@ -9,8 +10,17 @@ with lib;
 
 let
     cfg = config.services.blockurl;
+    hashesFile = pkgs.writeText "blockurl-api-key-hashes.json" (builtins.toJSON cfg.apiKeyHashes);
+    authEnabled = cfg.apiKeyHashes != { };
 in
 {
+    imports = [
+        (mkRemovedOptionModule [ "services" "blockurl" "apiKeyFile" ] ''
+            Each client now has its own key: list their SHA-256 digests in
+            services.blockurl.apiKeyHashes and set services.blockurl.storageSecretFile.
+        '')
+    ];
+
     ##############################################################################
     # Options
     ##############################################################################
@@ -67,15 +77,26 @@ in
             description = "System group that runs the service.";
         };
 
-        apiKeyFile = mkOption {
+        apiKeyHashes = mkOption {
+            type = types.attrsOf types.str;
+            default = { };
+            example = literalExpression ''{ laptop = "9b7b3606...a9ec38"; phone = "..."; }'';
+            description = ''
+                Client name to the hex SHA-256 digest of that client's API key, made with
+                <literal>printf %s KEY | sha256sum</literal>. When set, every request must
+                carry one of the keys in its <literal>X-API-Key</literal> header or come from
+                a signed-in web session. The digests are not secret and go into the Nix store.
+            '';
+        };
+
+        storageSecretFile = mkOption {
             type = types.nullOr types.path;
             default = null;
-            example = "/run/secrets/blockurl-api-key";
+            example = "/run/secrets/blockurl-storage-secret";
             description = ''
-                Path to a file containing <literal>BLOCKURL_API_KEY=&lt;value&gt;</literal>.
-                When set, all API requests must include a matching
-                <literal>X-API-Key</literal> header. Compatible with agenix/sops-nix
-                secrets rendered in systemd EnvironmentFile format.
+                Path to a file holding the secret that signs web session cookies.
+                Required when <option>apiKeyHashes</option> is set. It is passed in as a
+                systemd credential, so the file may stay readable by root only.
             '';
         };
 
@@ -92,6 +113,13 @@ in
     # Configuration
     ##############################################################################
     config = mkIf cfg.enable {
+
+        assertions = [
+            {
+                assertion = authEnabled -> cfg.storageSecretFile != null;
+                message = "services.blockurl.storageSecretFile must be set when apiKeyHashes is set.";
+            }
+        ];
 
         # --- User & group --------------------------------------------------------
         users.users.${cfg.user} = {
@@ -114,11 +142,18 @@ in
             after = [ "network.target" ];
             wantedBy = [ "multi-user.target" ];
 
-            environment = cfg.extraEnv // {
-                BLOCKURL_DATABASE_PATH = "${cfg.dataDir}/${cfg.databaseFile}";
-                BLOCKURL_HOST = cfg.host;
-                BLOCKURL_PORT = toString cfg.port;
-            };
+            environment =
+                cfg.extraEnv
+                // {
+                    BLOCKURL_DATABASE_PATH = "${cfg.dataDir}/${cfg.databaseFile}";
+                    BLOCKURL_HOST = cfg.host;
+                    BLOCKURL_PORT = toString cfg.port;
+                }
+                // optionalAttrs authEnabled { BLOCKURL_API_KEY_HASHES_FILE = "${hashesFile}"; }
+                // optionalAttrs (cfg.storageSecretFile != null) {
+                    # systemd expands %d to the service's credentials directory.
+                    BLOCKURL_STORAGE_SECRET_FILE = "%d/storage-secret";
+                };
 
             serviceConfig = {
                 Type = "simple";
@@ -126,7 +161,9 @@ in
                 Group = cfg.group;
                 ExecStart = "${cfg.package}/bin/blockurl-server";
                 WorkingDirectory = cfg.dataDir;
-                EnvironmentFile = lib.optional (cfg.apiKeyFile != null) cfg.apiKeyFile;
+                LoadCredential = lib.optional (
+                    cfg.storageSecretFile != null
+                ) "storage-secret:${cfg.storageSecretFile}";
                 Restart = "on-failure";
                 RestartSec = "5s";
 

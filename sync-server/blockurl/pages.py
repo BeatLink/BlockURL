@@ -109,7 +109,7 @@ def _theme_toggle(remember):
     show()
 
 
-def register_pages(database, api_key):
+def register_pages(database, auth_enabled):
     """Attach the dashboard to the NiceGUI app."""
 
     @ui.page('/')
@@ -120,8 +120,8 @@ def register_pages(database, api_key):
         with ui.header().classes('halon-frame'):
             ui.label('BlockURL').classes('halon-brand')
             ui.space()
-            _theme_toggle(remember=bool(api_key))
-            if api_key:
+            _theme_toggle(remember=auth_enabled)
+            if auth_enabled:
                 ui.button('Sign out', color=None, on_click=lambda: ui.navigate.to('/logout')) \
                     .classes('halon-btn halon-btn-flat')
 

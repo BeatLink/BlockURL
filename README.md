@@ -187,9 +187,37 @@ services.blockurl = {
   dataDir = "/var/lib/blockurl"; # Directory for the SQLite database
   databaseFile = "blockurl.db"; # Database filename
   openFirewall = true; # Open the port in the firewall (default: false)
+  apiKeyHashes = { }; # Client name to the SHA-256 digest of its API key (default: no auth)
+  storageSecretFile = null; # Secret that signs web session cookies, required with apiKeyHashes
   extraEnv = {}; # Additional environment variables
 };
 ```
+
+##### API Keys
+
+Each client (an addon install, or a person using the web UI) gets its own random key, and the server stores only the SHA-256 digest of each one, so it holds no client secrets and logs which client signed in or changed data.
+
+Make a key and its digest for each client:
+
+```bash
+key=$(openssl rand -hex 32)
+echo "$key"                      # paste into the addon's settings, or the web UI login
+printf %s "$key" | sha256sum     # the first field is the digest
+```
+
+Then list the digests and point the server at a session secret (for example a sops-nix or agenix secret holding `openssl rand -hex 32`):
+
+```nix
+services.blockurl = {
+  apiKeyHashes = {
+    laptop = "9b7b36061a684541007d2c543574a1db801bc8f41f85ac5fdc0155fe72a9ec38";
+    phone = "<digest of the phone's key>";
+  };
+  storageSecretFile = "/run/secrets/blockurl-storage-secret";
+};
+```
+
+Removing a client's entry revokes its key. Outside NixOS, set `BLOCKURL_API_KEY_HASHES_FILE` to a JSON file of the same shape (`{"laptop": "<digest>"}`) and `BLOCKURL_STORAGE_SECRET_FILE` to the session secret file. With no digests configured, the server needs no key.
 
 ### Development
 

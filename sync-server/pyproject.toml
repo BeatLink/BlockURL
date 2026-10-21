@@ -33,4 +33,4 @@ asyncio_mode = "auto"
 addopts = "-p nicegui.testing.user_plugin"
 # The UI tests drive the real entry point, which registers every page and route.
 main_file = "tests/ui_main.py"
-markers = ["blockurl_api_key: run the app with this API key configured"]
+markers = ["blockurl_client_keys: run the app with these client keys configured, as a name to key mapping"]
